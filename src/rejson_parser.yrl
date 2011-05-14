@@ -11,7 +11,6 @@ Nonterminals document
              object_pattern
              object_rest
              object_value
-             object_capture
 .
 
 Terminals    literal
@@ -54,27 +53,40 @@ array_value -> array_value '^' array_value : {interleave, '$1', '$3'}.
 
 object -> '{' object_pattern '}' : {object, '$2'}.
 
+object_pattern -> '$empty' : [].
 object_pattern -> object_value object_rest : ['$1' | '$2'].
 
 object_rest -> '$empty' : [].
-object_rest ->',' object_value object_rest : ['$1' | '$2'].
+object_rest -> ',' object_value object_rest : ['$2' | '$3'].
 
-object_value -> string ':' object_capture : {'$1', '$3'}.
+object_value -> string ':' pattern : {key('$1'), '$3'}.
 object_value -> discard : discard.
-
-object_capture -> pattern : '$1'.
-
 
 Erlang code.
 
 ground({ground_type, _Line, Type}) ->
     {ground, Type}.
 
-value({string, _Line, String}) ->
-    Chars = unicode:characters_to_list(String),
-    {value, lists:sublist(Chars, 2, length(Chars) -2)};
+value({string, _Line, Chars}) ->
+    {value, string_val(Chars)};
 value({literal, _Line, Value}) ->
     {value, Value}.
 
+key({string, _Line, Chars}) ->
+    string_val(Chars).
+
+string_val(Chars) ->
+    unescape(lists:sublist(Chars, 2, length(Chars) - 2)).
+
 variable({identifier, _Line, String}) ->
-    unicode:characters_to_list(String).
+    String.
+
+unescape(Chars) ->
+    unescape1(Chars, []).
+
+unescape1([], Chars) ->
+    lists:reverse(Chars);
+unescape1([$\\, $\" | R], Chars) ->
+    unescape1(R, [$\" | Chars]);
+unescape1([C | R], Chars) ->
+    unescape1(R, [C | Chars]).

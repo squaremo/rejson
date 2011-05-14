@@ -7,7 +7,7 @@ Rules.
 
 {P} : {token, {list_to_atom(TokenChars), TokenLine}}.
 
-\"([^\"]|(\"))*\" : {token, {string, TokenLine, TokenChars}}.
+\"([^\"]|(\\\"))*\" : {token, {string, TokenLine, TokenChars}}.
 
 (\+|-)?[0-9]+\.[0-9]+((E|e)(\+|-)?[0-9]+)? :
   {token, {literal, TokenLine, list_to_float(TokenChars)}}.

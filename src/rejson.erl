@@ -25,12 +25,15 @@ parse_test_() ->
              { {value, 1}, "1" },
              { {value, ""}, "\"\"" },
              { {value, "foo"}, "\"foo\"" },
+             { {value, [$\"]}, [$\", $\\, $\", $\"] },
              { {value, 1.5}, "1.5" }, %% careful ..
 
              %% Compund values
+             { {array, []}, "[]" },
              { {array, [{value, 1}]}, "[1]" },
              { {array, [{value, 2}, {value, 3}]}, "[2, 3]" },
              { {array, [{value, 5}, {value, "bar"}]}, "[5, \"bar\"]" },
+             { {object, [{"foo", {value, "bar"}}]}, "{ \"foo\" : \"bar\" }" },
 
              { discard, "_" },
              { {capture, "Foo", discard}, "Foo" },
