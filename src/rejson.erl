@@ -26,6 +26,7 @@ parse_test_() ->
              { {value, ""}, "\"\"" },
              { {value, "foo"}, "\"foo\"" },
              { {value, [$\"]}, [$\", $\\, $\", $\"] },
+             { {value, [$\", $\"]}, [$\", $\\, $\", $\\, $\", $\"] },
              { {value, 1.5}, "1.5" }, %% careful ..
 
              %% Compund values
@@ -33,8 +34,24 @@ parse_test_() ->
              { {array, [{value, 1}]}, "[1]" },
              { {array, [{value, 2}, {value, 3}]}, "[2, 3]" },
              { {array, [{value, 5}, {value, "bar"}]}, "[5, \"bar\"]" },
+             { {object, []}, "{}" },
              { {object, [{"foo", {value, "bar"}}]}, "{ \"foo\" : \"bar\" }" },
 
+             %% Ground types
+             { {ground, number}, "number" },
+             { {ground, string}, "string" },
+             { {ground, boolean}, "boolean"},
+
+             %% Nested
+             { {array, [{ground, number}, {value, 6}]}, "[number, 6]" },
+             { {object, [{"baz", {ground, string}}]}, "{\"baz\" : string}" },
+
+             %% Repeats and interleave
+             { {array, [{star, {ground, number}}]}, "[number *]" },
+             { {array, [{value, 10}, {maybe, {ground, string}}]}, "[10, string ?]"},
+             { {array, [{interleave, {value, 3}, {value, 5}}]}, "[3 ^ 5]"},
+
+             %% Simple variable capture
              { discard, "_" },
              { {capture, "Foo", discard}, "Foo" },
              { {capture, "Foo", {value, 1}}, "Foo = 1"},
