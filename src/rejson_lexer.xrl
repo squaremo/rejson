@@ -1,19 +1,11 @@
 
 Definitions.
 
+P = [{}\[\]=*+?^,:]
+
 Rules.
 
-\{ : {token, {'{', TokenLine}}.
-\} : {token, {'}', TokenLine}}.
-\[ : {token, {'[', TokenLine}}.
-\] : {token, {']', TokenLine}}.
-\= : {token, {'=', TokenLine}}.
-\* : {token, {'*', TokenLine}}.
-\+ : {token, {'+', TokenLine}}.
-\? : {token, {'?', TokenLine}}.
-\^ : {token, {'^', TokenLine}}.
-\, : {token, {',', TokenLine}}.
-\: : {token, {':', TokenLine}}.
+{P} : {token, {list_to_atom(TokenChars), TokenLine}}.
 
 \"([^\"]|(\"))*\" : {token, {string, TokenLine, TokenChars}}.
 
@@ -29,7 +21,7 @@ Rules.
 (true)|(false)|(null) :
   {token, {literal, TokenLine, list_to_atom(TokenChars)}}.
 
-_?[a-zA-Z_]+ : {token, {variable, TokenLine, TokenChars}}.
+[a-zA-Z][a-zA-Z_]* : {token, {identifier, TokenLine, TokenChars}}.
 
 _ : {token, {discard, TokenLine}}.
 
