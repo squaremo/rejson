@@ -63,7 +63,7 @@ parse_test_() ->
              { {value, [$\", $\"]}, [$\", $\\, $\", $\\, $\", $\"] },
              { {value, 1.5}, "1.5" }, %% careful ..
 
-             %% Compund values
+             %% Compound values
              { {array, []}, "[]" },
              { {array, [{value, 1}]}, "[1]" },
              { {array, [{value, 2}, {value, 3}]}, "[2, 3]" },
@@ -78,6 +78,11 @@ parse_test_() ->
              { boolean, "boolean"},
              { {array, [number, {value, 6}]}, "[number, 6]" },
              { {object, [{"baz", string}]}, "{\"baz\" : string}" },
+
+             %% Alternation
+             { {either, number, string}, "number | string" },
+             { {either, {value, "foo"}, {array, []}}, "\"foo\" | []" },
+             { {either, {value, 38}, {object, []}}, " 38 | {}" },
 
              %% Repeats and interleave
              { {array, [{star, number}]}, "[number *]" },

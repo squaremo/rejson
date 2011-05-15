@@ -18,7 +18,7 @@ Terminals    literal
              ground_type
              identifier
              discard
-             '=' '{' '}' '[' ']' '*' '+' '?' '^' ',' ':'
+             '=' '{' '}' '[' ']' '*' '+' '?' '^' ',' ':' '|'
 .
 
 Rootsymbol pattern.
@@ -31,6 +31,7 @@ pattern -> array : '$1'.
 pattern -> object : '$1'.
 pattern -> variable : {capture, '$1', discard}.
 pattern -> variable '=' pattern : {capture, '$1', '$3'}.
+pattern -> pattern '|' pattern : {either, '$1', '$3'}.
 pattern -> array '^' array : {interleave, '$1', '$3'}.
 
 value -> literal : value('$1').

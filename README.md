@@ -72,6 +72,12 @@ These can be used nested in an array or object:
 
     {"foo": number} / {"foo": 10} |- match
 
+### Either
+
+A bar signifies alternatives:
+
+    number | string / "foo" |- match
+
 ### Any
 
 Any, '_', matches any value:
