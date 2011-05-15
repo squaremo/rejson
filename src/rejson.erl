@@ -14,7 +14,6 @@ parse(In) when is_list(In) ->
             Err
     end.
 
-
 -ifdef(TEST).
 
 parse_test_() ->
@@ -22,6 +21,7 @@ parse_test_() ->
         {A, B} <-
             [
              %% Ground values
+             { discard, "_" },
              { {value, 1}, "1" },
              { {value, ""}, "\"\"" },
              { {value, "foo"}, "\"foo\"" },
@@ -36,6 +36,7 @@ parse_test_() ->
              { {array, [{value, 5}, {value, "bar"}]}, "[5, \"bar\"]" },
              { {object, []}, "{}" },
              { {object, [{"foo", {value, "bar"}}]}, "{ \"foo\" : \"bar\" }" },
+             { {object, [{"foo", discard}, discard]}, "{\"foo\": _, _}" },
 
              %% Ground types
              { {ground, number}, "number" },
@@ -55,7 +56,6 @@ parse_test_() ->
                         "{\"foo\": string ?}" },
 
              %% Simple variable capture
-             { discard, "_" },
              { {capture, "Foo", discard}, "Foo" },
              { {capture, "Foo", {value, 1}}, "Foo = 1"},
              { {capture, "Foo", {value, "foo"}}, "Foo = \"foo\"" }

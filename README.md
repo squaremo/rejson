@@ -59,7 +59,7 @@ For example,
 
 and
 
-    {"foo": 1, "bar": 2} / {"bar": 2, "foo": 1} |- {match, []}
+    {"foo": 1, "bar": 2} / {"bar": 2, "foo": 1} |- match
 
 ### Ground types
 
