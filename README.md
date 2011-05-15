@@ -19,22 +19,28 @@ What will it do (if I finish it)? Here's a suggestive example:
 
 Here are something things that are like rejson:
 
- - *Erlang term pattern-matching*. Actually this is pretty close, but
-    it doesn't deal with matching objects (maps), or sequences
-    (repetition and interleave).
+ - [**Erlang term
+    pattern-matching**](http://www.erlang.org/doc/reference_manual/expressions.html#pattern). This
+    is pretty close, but it doesn't deal with matching objects (maps),
+    or sequences (repetition and interleave).
 
- - *JSON schema*. This isn't pattern-matching, but it is close in that
-    it's verifying the shape of a JSON term. However, JSON schema is
-    unsurprisingly more akin to XML Schema, in that it encodes a
-    language entirely unlike JSON, but describing JSON, in JSON.
+ - [**CDuce pattern matching and
+ types**](http://www.cduce.org/manual_types_patterns.html). This is
+ probably closest in spirit, even though it is based on XML
+ schema. CDuce goes further and has a type system built on these
+ patterns.
+
+ - [**JSON schema**](http://json-schema.org/). This isn't
+    pattern-matching, but it is close in that it's verifying the shape
+    of a JSON term. However, JSON schema is unsurprisingly more akin
+    to XML Schema, in that it encodes a language entirely unlike JSON,
+    but describing JSON, in JSON.
 
     I think it's better to make the pattern language parallel to the
-    value language, even if it can't reuse the parser.
-
-    I'm also trying to make a pattern-matcher, rather than a
-    schema-checker. In other words, the idea is to get variable
-    bindings out the other end, not only see if a term matches some
-    shape.
+    value language, even if it can't reuse the parser. I'm also trying
+    to make a pattern-matcher, rather than a schema-checker. In other
+    words, the idea is to get variable bindings out the other end, not
+    only see if a term matches some shape.
 
  - *Other attempts*, notably
     [jsonr](http://laurentszyster.be/jsonr/). This is more
