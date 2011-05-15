@@ -41,15 +41,15 @@ parse_test_() ->
              { {ground, number}, "number" },
              { {ground, string}, "string" },
              { {ground, boolean}, "boolean"},
-
-             %% Nested
              { {array, [{ground, number}, {value, 6}]}, "[number, 6]" },
              { {object, [{"baz", {ground, string}}]}, "{\"baz\" : string}" },
 
              %% Repeats and interleave
              { {array, [{star, {ground, number}}]}, "[number *]" },
              { {array, [{value, 10}, {maybe, {ground, string}}]}, "[10, string ?]"},
-             { {array, [{interleave, {value, 3}, {value, 5}}]}, "[3 ^ 5]"},
+             { {interleave,
+                {array, [{value, 1}, {value, 2}]},
+                {array, [{value, 3}, {value, 4}]}}, "[1, 2] ^ [3, 4]" },
 
              %% Simple variable capture
              { discard, "_" },
