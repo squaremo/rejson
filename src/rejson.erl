@@ -54,9 +54,17 @@ match_either(P1, P2, Json, Bindings) ->
 
 match_sequence([], [], Bindings) ->
     {ok, Bindings};
+match_sequence([], [_ | _], _) ->
+    no_match;
+match_sequence([{plus, P} | PT], Json, Bindings) ->
+    match_sequence([P, {star, P} | PT], Json, Bindings);
+match_sequence([{star, P} | PT], Json, Bindings) ->
+    match_either({array, PT}, {array, [P, {star, P} | PT]}, Json, Bindings);
+match_sequence([{maybe, P} | PT], Json, Bindings) ->
+    match_either({array, PT}, {array, [P | PT]}, Json, Bindings);
 match_sequence([P | PT], [J | JT], Bindings) ->
     case trivial_match(P, J) of
-        ok -> match1({array, PT}, JT, Bindings);
+        ok -> match_sequence(PT, JT, Bindings);
         no -> no_match
     end.
 
@@ -128,7 +136,8 @@ value_match_test_() ->
              {"true", true},
              {"false", false},
              {"number | string", 34},
-             {"number | string", "foo"}
+             {"number | string", "foo"},
+             {"1 | 2 | 3", 3}
     ]].
 
 array_match_test_() ->
@@ -137,10 +146,21 @@ array_match_test_() ->
                 end)} ||
         {A, B} <-
             [
-             {"[]", []},
-             {"[1]", [1]},
-             {"[\"foo\", number]", ["foo", 4.7]},
-             {"[_, _]", [4, "bar"]}
+             { "[]", [] },
+             { "[1]", [1] },
+             { "[\"foo\", number]", ["foo", 4.7] },
+             { "[_, _]", [4, "bar"] },
+
+             { "[number *]", [1, 2, 3] },
+             { "[number *]", [] },
+             { "[number +]", [1, 2, 3] },
+             { "[number +]", [1] },
+             { "[number ?]", [] },
+             { "[number ?]", [1] },
+             { "[1, 2, 3 ?]", [1, 2, 3] },
+             { "[1, 2, 3 ?]", [1, 2] },
+             { "[1, number *, 3]", [1, 3] },
+             { "[1, number *, 3]", [1, 2, 2, 3] }
             ]].
 
 -endif.
