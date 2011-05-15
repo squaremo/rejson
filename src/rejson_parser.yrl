@@ -61,7 +61,7 @@ object_rest -> ',' discard : [discard].
 object_rest -> ',' object_value object_rest : ['$2' | '$3'].
 
 object_value -> string ':' pattern : {key('$1'), '$3'}.
-object_value -> string ':' pattern '?' : {key('$1'), {maybe, '$2'}}.
+object_value -> string ':' pattern '?' : {key('$1'), {maybe, '$3'}}.
 
 Erlang code.
 

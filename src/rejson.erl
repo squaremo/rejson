@@ -51,6 +51,9 @@ parse_test_() ->
                 {array, [{value, 1}, {value, 2}]},
                 {array, [{value, 3}, {value, 4}]}}, "[1, 2] ^ [3, 4]" },
 
+             { {object, [{"foo", {maybe, {ground, string}}}]},
+                        "{\"foo\": string ?}" },
+
              %% Simple variable capture
              { discard, "_" },
              { {capture, "Foo", discard}, "Foo" },
