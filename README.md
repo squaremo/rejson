@@ -40,3 +40,81 @@ Here are something things that are like rejson:
     [jsonr](http://laurentszyster.be/jsonr/). This is more
     text-oriented, with no binding capture, but is close in spirit to
     rejson. It's limited by insisting on being encoded in JSON.
+
+## Pattern syntax
+
+### Values
+   
+All JSON literal values are valid patterns, and match by equivalence.
+
+For example,
+
+    1 / 1 |- match
+
+and
+
+    {"foo": 1, "bar": 2} / {"bar": 2, "foo": 1} |- {match, []}
+
+### Ground types
+
+`number`, `string`, and `boolean` each match any value of the
+respective type:
+
+    number / 1.5 |- match
+
+These can be used nested in an array or object:
+
+    {"foo": number} / {"foo": 10} |- match
+
+### Any
+
+Any, '_', matches any value:
+
+    _ / "foobar" |- match
+
+It can be used in arrays and objects:
+
+    [1, 2, 3, _] / [1,2,3,"bar"] |- match
+
+    {"foo": _} / {"foo": 23} |- match
+
+Used in the place of a whole property it can signify arbitrary
+additional properties:
+
+    {"foo": 1, _} / {"foo": 1, "bar": 2} |- match
+
+It can only go in the last position for this purpose (object
+properties are unordered anyway).
+
+### Star, Plus, Maybe
+
+The Kleene operator '*' (zero or more) and its relative '+' (one or more) can
+match arrays:
+
+    [number *] / [1,2,3] |- match
+
+Maybe, '?', matches zero or one, and can be used in arrays or objects:
+
+    [number, string ?] / [1] |- match
+    [number, string ?] / [1, "bar"] |- match
+
+    {"foo": string ?, _} / {"bar": 1} |- match
+    {"foo": string ?, _} / {"foo": 2} |- match
+
+### Interleave
+
+Interleave, '^', can be used between array patterns to matches array values
+in which the elements matching the left-hand pattern are arbitrarily
+interleaved with the elements matching the right-hand pattern. For
+example,
+
+    [1, 2, 3] ^ ["foo", "bar"] / [1, "foo", 2, 3, "bar"] |- match
+
+### Variable capture
+
+A capture can appear in almost any position, and introduces a pattern
+that will prodice a binding if it matches.  For example,
+
+    Foo = number / 3 |- match, Foo = 3
+
+The one place a capture cannot appear is as a property name.
