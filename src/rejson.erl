@@ -35,8 +35,18 @@ trivial_match(true, true)                 -> ok;
 trivial_match({value, Value}, Value)      -> ok;
 trivial_match(_, _)                       -> no.
 
-match1(_, _, _) ->
+match1({array, Array}, Json, Bindings) when is_list(Json) ->
+    match_sequence(Array, Json, Bindings);
+match1(_ , _, _) ->
     no_match.
+
+match_sequence([], [], Bindings) ->
+    {ok, Bindings};
+match_sequence([P | PT], [J | JT], Bindings) ->
+    case trivial_match(P, J) of
+        ok -> match1({array, PT}, JT, Bindings);
+        no -> no_match
+    end.
 
 -ifdef(TEST).
 
@@ -98,7 +108,20 @@ value_match_test_() ->
              {"boolean", false},
              {"1", 1},
              {"\"foobar\"", "foobar"},
-             {"true", true}
+             {"true", true},
+             {"false", false}
     ]].
+
+array_match_test_() ->
+    [{A, ?_test(case parse(A) of
+                    {ok, P} -> ?assertMatch({ok, []}, match(P, B))
+                end)} ||
+        {A, B} <-
+            [
+             {"[]", []},
+             {"[1]", [1]},
+             {"[\"foo\", number]", ["foo", 4.7]},
+             {"[_, _]", [4, "bar"]}
+            ]].
 
 -endif.
