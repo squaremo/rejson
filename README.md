@@ -37,6 +37,6 @@ Here are something things that are like rejson:
     shape.
 
  - *Other attempts*, notably
-    (jsonr)[http://laurentszyster.be/jsonr/]. This is more
+    [jsonr](http://laurentszyster.be/jsonr/). This is more
     text-oriented, with no binding capture, but is close in spirit to
     rejson. It's limited by insisting on being encoded in JSON.
