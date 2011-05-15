@@ -35,10 +35,22 @@ trivial_match(true, true)                 -> ok;
 trivial_match({value, Value}, Value)      -> ok;
 trivial_match(_, _)                       -> no.
 
+match1({either, P1, P2}, Json, Bindings) ->
+    match_either(P1, P2, Json, Bindings);
 match1({array, Array}, Json, Bindings) when is_list(Json) ->
     match_sequence(Array, Json, Bindings);
 match1(_ , _, _) ->
     no_match.
+
+%% TODO We should probably use an explicit stack here, because we
+%% can't tail call.
+match_either(P1, P2, Json, Bindings) ->
+    case match(P1, Json, Bindings) of
+        no_match ->
+            match(P2, Json, Bindings);
+        OK = {ok, _} ->
+            OK
+    end.
 
 match_sequence([], [], Bindings) ->
     {ok, Bindings};
@@ -114,7 +126,9 @@ value_match_test_() ->
              {"1", 1},
              {"\"foobar\"", "foobar"},
              {"true", true},
-             {"false", false}
+             {"false", false},
+             {"number | string", 34},
+             {"number | string", "foo"}
     ]].
 
 array_match_test_() ->
