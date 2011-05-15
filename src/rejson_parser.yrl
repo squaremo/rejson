@@ -66,7 +66,7 @@ object_value -> string ':' pattern '?' : {key('$1'), {maybe, '$3'}}.
 Erlang code.
 
 ground({ground_type, _Line, Type}) ->
-    {ground, Type}.
+    Type.
 
 value({string, _Line, Chars}) ->
     {value, string_val(Chars)};

@@ -1,6 +1,6 @@
 -module(rejson).
 
--export([parse/1]).
+-export([parse/1, match/2]).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -14,10 +14,34 @@ parse(In) when is_list(In) ->
             Err
     end.
 
+match(Pattern, Json) ->
+    match(Pattern, Json, []).
+
+%% Ground types
+match(Pattern, Json, Bindings) ->
+    case trivial_match(Pattern, Json) of
+        ok -> {ok, Bindings};
+        no -> match1(Pattern, Json, Bindings)
+    end.
+
+trivial_match(discard, _Json)             -> ok;
+trivial_match(string, String) when
+      is_list(String)                     -> ok;
+trivial_match(number, Number) when
+      is_number(Number)                   -> ok;
+trivial_match(boolean, Bool) when
+      Bool =:= true orelse Bool =:= false -> ok;
+trivial_match(true, true)                 -> ok;
+trivial_match({value, Value}, Value)      -> ok;
+trivial_match(_, _)                       -> no.
+
+match1(_, _, _) ->
+    no_match.
+
 -ifdef(TEST).
 
 parse_test_() ->
-    [?_assertEqual({ok, A}, rejson:parse(B)) ||
+    [{B, ?_assertEqual({ok, A}, parse(B))} ||
         {A, B} <-
             [
              %% Ground values
@@ -39,20 +63,20 @@ parse_test_() ->
              { {object, [{"foo", discard}, discard]}, "{\"foo\": _, _}" },
 
              %% Ground types
-             { {ground, number}, "number" },
-             { {ground, string}, "string" },
-             { {ground, boolean}, "boolean"},
-             { {array, [{ground, number}, {value, 6}]}, "[number, 6]" },
-             { {object, [{"baz", {ground, string}}]}, "{\"baz\" : string}" },
+             { number, "number" },
+             { string, "string" },
+             { boolean, "boolean"},
+             { {array, [number, {value, 6}]}, "[number, 6]" },
+             { {object, [{"baz", string}]}, "{\"baz\" : string}" },
 
              %% Repeats and interleave
-             { {array, [{star, {ground, number}}]}, "[number *]" },
-             { {array, [{value, 10}, {maybe, {ground, string}}]}, "[10, string ?]"},
+             { {array, [{star, number}]}, "[number *]" },
+             { {array, [{value, 10}, {maybe, string}]}, "[10, string ?]"},
              { {interleave,
                 {array, [{value, 1}, {value, 2}]},
                 {array, [{value, 3}, {value, 4}]}}, "[1, 2] ^ [3, 4]" },
 
-             { {object, [{"foo", {maybe, {ground, string}}}]},
+             { {object, [{"foo", {maybe, string}}]},
                         "{\"foo\": string ?}" },
 
              %% Simple variable capture
@@ -60,5 +84,21 @@ parse_test_() ->
              { {capture, "Foo", {value, 1}}, "Foo = 1"},
              { {capture, "Foo", {value, "foo"}}, "Foo = \"foo\"" }
             ]].
+
+value_match_test_() ->
+    [{A, ?_test(case parse(A) of
+                     {ok, P} -> ?assertMatch({ok, []}, match(P, B))
+                 end)} ||
+        {A, B} <-
+            [
+             {"_", 103},
+             {"number", 46.5},
+             {"string", "foo"},
+             {"boolean", true},
+             {"boolean", false},
+             {"1", 1},
+             {"\"foobar\"", "foobar"},
+             {"true", true}
+    ]].
 
 -endif.
