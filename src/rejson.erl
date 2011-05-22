@@ -14,59 +14,159 @@ parse(In) when is_list(In) ->
             Err
     end.
 
+%% Match a newly-parsed pattern to a term, all or nothing.
 match(Pattern, Json) ->
-    match(Pattern, Json, []).
+    derive(Pattern, Json).
 
-%% Ground types
-match(Pattern, Json, Bindings) ->
-    case trivial_match(Pattern, Json) of
-        ok -> {ok, Bindings};
-        no -> match1(Pattern, Json, Bindings)
-    end.
+%% Start a derivation with fresh stacks. Every time we try a match, we
+%% push onto the continuation stack. If the match is successful, we
+%% pop and continue. Every time we may need to backtrack, we push onto
+%% the backtrack stack; if we come to a dead-end, we pop and continue.
+derive(P, J) ->
+    derive(P, J, [], []).
 
-trivial_match(discard, _Json)             -> ok;
-trivial_match(string, String) when
-      is_list(String)                     -> ok;
-trivial_match(number, Number) when
-      is_number(Number)                   -> ok;
-trivial_match(boolean, Bool) when
-      Bool =:= true orelse Bool =:= false -> ok;
-trivial_match(true, true)                 -> ok;
-trivial_match({value, Value}, Value)      -> ok;
-trivial_match(_, _)                       -> no.
+%% TODO empty object
+%% Either
+derive({either, P1, P2}, Json, Ks, Backtrack) ->
+    derive(P1, Json, Ks, [{P2, Json, Ks} | Backtrack]);
+derive({array, Seq}, Json, Ks, Backtrack) when is_list(Json) ->
+    derive_seq(Seq, Json, Ks, Backtrack);
+derive({array, _}, _, _, Backtrack) ->
+    fail(Backtrack);
+derive({interleave, Seq1, Seq2}, Json, Ks, Backtrack) when
+      is_list(Json) ->
+    derive_interleave(Seq1, Seq2, Json, Ks, Backtrack);
+derive({interleave, _, _}, _, _, Backtrack) ->
+    fail(Backtrack);
+derive({capture, _V, P}, Json, Ks, Backtrack) ->
+    %% TODO
+    derive(P, Json, Ks, Backtrack);
+derive(Pattern, Json, Ks, Backtrack) ->
+    derive_simple(Pattern, Json, Ks, Backtrack).
 
-match1({either, P1, P2}, Json, Bindings) ->
-    match_either(P1, P2, Json, Bindings);
-match1({array, Array}, Json, Bindings) when is_list(Json) ->
-    match_sequence(Array, Json, Bindings);
-match1(_ , _, _) ->
-    no_match.
+derive_seq(Pattern, [], Ks, Backtrack) ->
+    succeed({array, Pattern}, Ks, Backtrack);
+%% Unmatched values left over
+derive_seq([], _Json, _, Backtrack) ->
+    fail(Backtrack);
+derive_seq([{maybe, P} | Rest], Json, Ks, Backtrack) ->
+    %% shortcut the either
+    derive_seq(Rest, Json, Ks,
+               [{{array, [P | Rest]}, Json, Ks} | Backtrack]);
+derive_seq([{star, P} | Rest], Json, Ks, Backtrack) ->
+    derive_seq(Rest, Json, Ks,
+               [{{array, [P, {star, P} | Rest]}, Json, Ks} | Backtrack]);
+derive_seq([{plus, P} | Rest], Json, Ks, Backtrack) ->
+    derive_seq([P, {star, P} | Rest], Json, Ks, Backtrack);
+derive_seq([P | PRest], [J | JRest], Ks, Backtrack) ->
+    %% FIXME make this 'push', otherwise simplify (e.g., don't bother
+    %% pushing if a simple pattern)
+    derive(P, J, [{{rest, {array, PRest}, JRest}, Backtrack} | Ks], Backtrack).
 
-%% TODO We should probably use an explicit stack here, because we
-%% can't tail call.
-match_either(P1, P2, Json, Bindings) ->
-    case match(P1, Json, Bindings) of
-        no_match ->
-            match(P2, Json, Bindings);
-        OK = {ok, _} ->
-            OK
-    end.
+%% Interleave:
+%% a ^ b / s |- (a / s) ^ b | a ^ (b / s)
 
-match_sequence([], [], Bindings) ->
-    {ok, Bindings};
-match_sequence([], [_ | _], _) ->
+%% TODO redundant?
+derive_interleave(Seq1, Seq2, [], Ks, Backtrack) ->
+    case nullable(Seq1) andalso nullable(Seq2) of
+        true ->
+            succeed({interleave, Seq1, Seq2}, Ks, Backtrack);
+        false ->
+            fail(Backtrack)
+    end;
+derive_interleave({array, []}, Seq2, Json, Ks, Backtrack) ->
+    derive(Seq2, Json, Ks, Backtrack);
+derive_interleave(Seq1, {array, []}, Json, Ks, Backtrack) ->
+    derive(Seq1, Json, Ks, Backtrack);
+derive_interleave(Seq1, Seq2, Json = [H | T], Ks, Backtrack) ->
+    %% ^ is commutative
+    Succeed = {{interleave, Seq2, T}, Backtrack},
+    %% FIXME this will spin
+    Fail = {{interleave, Seq2, Seq1}, Json, Ks},
+    derive(Seq1, [H], [Succeed | Ks], [Fail | Backtrack]).
+
+%% 'empty' signifies that we have fully matched a value; this is the
+%% case if either we have matched a ground term or discarded a value,
+%% or we have matched a sequence and have a nullable pattern.
+
+%% We have two kinds of continuation. For {nested, ...}, we are
+%% expecting to have matched an element of a compound value and can
+%% continue with the other elements. For anything else, we are
+%% expecting to have some collection of values left to match.
+
+%% ***TODO Use [..] for array patterns, {[]} for object patterns,
+%% and explicit end_array/end_object (or empty) continuations.
+
+%% Nothing left to match, return.
+succeed(Pattern, [], Backtrack) ->
+    case nullable(Pattern) of
+        true ->  {ok, []};
+        false -> fail(Backtrack)
+    end;
+%% Partially matched an array value
+succeed(Remainder,
+        [{{rest, Pattern, Json}, Backtrack} | Ks], Backtrack) ->
+    %% shortcut; really should be nullable_seq specifically
+    io:format("Remainder : ~p, Outer: ~p, JSON: ~p~n", [Remainder, Pattern, Json]),
+    case nullable(Remainder) of
+        true  -> derive(Pattern, Json, Ks, Backtrack);
+        false -> fail(Backtrack)
+    end;
+%% Partially matched an array pattern, keep going ...
+succeed(empty, [{{array, Rest}, Json} | Ks], Backtrack) ->
+    derive_seq(Rest, Json, Ks, Backtrack);
+%% Partially matched an interleaved pattern, keep going ..
+succeed(LHS, [{{interleave, RHS, Json}, Backtrack} | Ks], _) ->
+    %%% TODO wrong
+    derive_interleave(LHS, RHS, Json, Ks, Backtrack).
+
+fail([]) ->
     no_match;
-match_sequence([{plus, P} | PT], Json, Bindings) ->
-    match_sequence([P, {star, P} | PT], Json, Bindings);
-match_sequence([{star, P} | PT], Json, Bindings) ->
-    match_either({array, PT}, {array, [P, {star, P} | PT]}, Json, Bindings);
-match_sequence([{maybe, P} | PT], Json, Bindings) ->
-    match_either({array, PT}, {array, [P | PT]}, Json, Bindings);
-match_sequence([P | PT], [J | JT], Bindings) ->
-    case trivial_match(P, J) of
-        ok -> match_sequence(PT, JT, Bindings);
-        no -> no_match
-    end.
+fail([{Pattern, Json, Ks} | Backtrack]) ->
+    derive(Pattern, Json, Ks, Backtrack).
+
+-define(MATCH, succeed(empty, Ks, Backtrack)).
+
+derive_simple(string, String, Ks, Backtrack) when
+      is_list(String) ->
+    ?MATCH;
+derive_simple(number, Number, Ks, Backtrack) when
+      is_number(Number) ->
+    ?MATCH;
+derive_simple(boolean, Bool, Ks, Backtrack) when
+      Bool =:= true orelse Bool =:= false ->
+    ?MATCH;
+derive_simple(true, true, Ks, Backtrack) ->
+    ?MATCH;
+derive_simple({value, Value}, Value, Ks, Backtrack) ->
+    ?MATCH;
+derive_simple(discard, _Json, Ks, Backtrack) ->
+    ?MATCH;
+derive_simple(_, _, _, Backtrack) ->
+    fail(Backtrack).
+
+nullable(empty) ->
+    true;
+nullable({array, Seq}) ->
+    nullable_seq(Seq);
+nullable({interleave, Seq1, Seq2}) ->
+    nullable_seq(Seq1) andalso nullable_seq(Seq2);
+%% TODO should this come up?
+nullable({either, Left, Right}) ->
+    nullable(Left) orelse nullable(Right);
+nullable(_) ->
+    false.
+
+nullable_seq([]) ->
+    true;
+nullable_seq([{star, _} | T]) ->
+    nullable_seq(T);
+nullable_seq([{maybe, _} | T]) ->
+    nullable_seq(T);
+nullable_seq({either, P1, P2}) ->
+    nullable_seq(P1) orelse nullable_seq(P2);
+nullable_seq(_) ->
+    false.
 
 -ifdef(TEST).
 
@@ -107,9 +207,12 @@ parse_test_() ->
              %% Repeats and interleave
              { {array, [{star, number}]}, "[number *]" },
              { {array, [{value, 10}, {maybe, string}]}, "[10, string ?]"},
+             { {array, [{value, 1},
+                        {array, [{value, 2}]}, {value, 3}]}, "[1, [2], 3]" },
              { {interleave,
                 {array, [{value, 1}, {value, 2}]},
                 {array, [{value, 3}, {value, 4}]}}, "[1, 2] ^ [3, 4]" },
+              %% TODO nested interleave
 
              { {object, [{"foo", {maybe, string}}]},
                         "{\"foo\": string ?}" },
@@ -161,6 +264,44 @@ array_match_test_() ->
              { "[1, 2, 3 ?]", [1, 2] },
              { "[1, number *, 3]", [1, 3] },
              { "[1, number *, 3]", [1, 2, 2, 3] }
+            ]].
+
+interleave_match_test_() ->
+    [{A, ?_test(case parse(A) of
+                    {ok, P} -> ?assertMatch({ok, []}, match(P, B))
+                end)} ||
+        {A, B} <-
+            [
+             { "[1, 2] ^ [3, 4]", [1, 3, 2, 4]}
+             ]].
+
+capture_notestyet_() ->
+    [{A, ?_test(case parse(A) of
+                    {ok, P} ->
+                        {ok, Bindings0} = match(P, B),
+                        Bindings = lists:sort(proplists:compact(Bindings0)),
+                        Expected = lists:sort(proplists:compact(C)),
+                        ?assertEqual(C, Bindings)
+                end)} ||
+        {A, B, C} <-
+            [
+             { "Foo = 1", 1, [{"Foo", 1}] }
+            ]].
+
+nomatch_test_() ->
+    [{A, ?_test(case parse(A) of
+                    {ok, P} ->
+                        ?assertMatch(no_match, match(P, B))
+                end)} ||
+        {A, B} <-
+            [
+             { "1", 2 },
+             { "2", "foo" },
+             { "string", 1 },
+             { "number", "foo" },
+             { "boolean", 56 },
+             { "true", false }
+             %% TODO array v string
             ]].
 
 -endif.

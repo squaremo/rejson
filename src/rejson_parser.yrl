@@ -4,6 +4,8 @@ Nonterminals document
              pattern
              variable
              array
+             array_head
+             maybe_interleave
              array_pattern
              array_rest
              array_value
@@ -32,14 +34,18 @@ pattern -> object : '$1'.
 pattern -> variable : {capture, '$1', discard}.
 pattern -> variable '=' pattern : {capture, '$1', '$3'}.
 pattern -> pattern '|' pattern : {either, '$1', '$3'}.
-pattern -> array '^' array : {interleave, '$1', '$3'}.
 
 value -> literal : value('$1').
 value -> string : value('$1').
 
 variable -> identifier : variable('$1').
 
-array -> '[' array_pattern ']' : {array, '$2'}.
+array -> array_head maybe_interleave : interleave('$1', '$2').
+
+maybe_interleave -> '$empty' : [].
+maybe_interleave -> '^' array_head : '$2'.
+
+array_head -> '[' array_pattern ']' : {array, '$2'}.
 
 array_pattern -> '$empty' : [].
 array_pattern -> array_value array_rest : ['$1' | '$2'].
@@ -92,3 +98,8 @@ unescape1([$\\, $\" | R], Chars) ->
     unescape1(R, [$\" | Chars]);
 unescape1([C | R], Chars) ->
     unescape1(R, [C | Chars]).
+
+interleave(Array, []) ->
+    Array;
+interleave(Seq1, Seq2) ->
+    {interleave, Seq1, Seq2}.
