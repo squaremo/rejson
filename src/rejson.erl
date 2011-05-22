@@ -78,11 +78,10 @@ derive_interleave({array, []}, Seq2, Json, Ks, Backtrack) ->
     derive(Seq2, Json, Ks, Backtrack);
 derive_interleave(Seq1, {array, []}, Json, Ks, Backtrack) ->
     derive(Seq1, Json, Ks, Backtrack);
-derive_interleave(Seq1, Seq2, Json = [H | T], Ks, Backtrack) ->
+derive_interleave(Seq1, Seq2, [H | T], Ks, Backtrack) ->
     %% ^ is commutative
-    Succeed = {{interleave, Seq2, T}, Backtrack},
-    %% FIXME this will spin
-    Fail = {{interleave, Seq2, Seq1}, Json, Ks},
+    Fail = {Seq2, [H], [{{interleave, Seq1, T}, Backtrack} | Ks]},
+    Succeed = {{interleave, Seq2, T}, [Fail | Backtrack]},
     derive(Seq1, [H], [Succeed | Ks], [Fail | Backtrack]).
 
 %% 'empty' signifies that we have fully matched a value; this is the
@@ -117,7 +116,6 @@ succeed(empty, [{{array, Rest}, Json} | Ks], Backtrack) ->
     derive_seq(Rest, Json, Ks, Backtrack);
 %% Partially matched an interleaved pattern, keep going ..
 succeed(LHS, [{{interleave, RHS, Json}, Backtrack} | Ks], _) ->
-    %%% TODO wrong
     derive_interleave(LHS, RHS, Json, Ks, Backtrack).
 
 fail([]) ->
@@ -212,7 +210,11 @@ parse_test_() ->
              { {interleave,
                 {array, [{value, 1}, {value, 2}]},
                 {array, [{value, 3}, {value, 4}]}}, "[1, 2] ^ [3, 4]" },
-              %% TODO nested interleave
+             { {interleave,
+                {array, [{value, 1}, {value, 2}]},
+                {interleave,
+                 {array, [{value, 3}, {value, 4}]},
+                 {array, [{value, 5}, {value, 6}]}}}, "[1, 2] ^ [3, 4] ^ [5, 6]" },
 
              { {object, [{"foo", {maybe, string}}]},
                         "{\"foo\": string ?}" },
@@ -263,7 +265,10 @@ array_match_test_() ->
              { "[1, 2, 3 ?]", [1, 2, 3] },
              { "[1, 2, 3 ?]", [1, 2] },
              { "[1, number *, 3]", [1, 3] },
-             { "[1, number *, 3]", [1, 2, 2, 3] }
+             { "[1, number *, 3]", [1, 2, 2, 3] },
+
+             { "[1, [2, 3], 4]", [1, [2, 3], 4] },
+             { "[number +, 3, number *]", [1,2,3,4] }
             ]].
 
 interleave_match_test_() ->
@@ -272,7 +277,10 @@ interleave_match_test_() ->
                 end)} ||
         {A, B} <-
             [
-             { "[1, 2] ^ [3, 4]", [1, 3, 2, 4]}
+             { "[1] ^ [2]", [2, 1] },
+             { "[1, 2] ^ [3, 4]", [1, 3, 2, 4]},
+             { "[1, 2] ^ [3, 4] ^ [5, 6]", [1, 2, 3, 4, 5, 6] },
+             { "[1, 2] ^ [3, 4] ^ [5, 6]", [3, 5, 1, 2, 6, 4] }
              ]].
 
 capture_notestyet_() ->

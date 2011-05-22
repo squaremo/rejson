@@ -43,7 +43,7 @@ variable -> identifier : variable('$1').
 array -> array_head maybe_interleave : interleave('$1', '$2').
 
 maybe_interleave -> '$empty' : [].
-maybe_interleave -> '^' array_head : '$2'.
+maybe_interleave -> '^' array : '$2'.
 
 array_head -> '[' array_pattern ']' : {array, '$2'}.
 
