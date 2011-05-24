@@ -61,34 +61,30 @@ derive_seq([{plus, P} | Rest], Json, Ks, Backtrack) ->
 derive_seq([P | PRest], [J | JRest], Ks, Backtrack) ->
     %% FIXME make this 'push', otherwise simplify (e.g., don't bother
     %% pushing if a simple pattern)
-    derive(P, J, [{{rest, {array, PRest}, JRest}, Backtrack} | Ks], Backtrack).
+    derive(P, J, [{rest, {array, PRest}, JRest} | Ks], Backtrack).
 
 %% Interleave:
 %% a ^ b / s |- (a / s) ^ b | a ^ (b / s)
 
 %% TODO redundant?
 derive_interleave(Seq1, Seq2, [], Ks, Backtrack) ->
-    case nullable(Seq1) andalso nullable(Seq2) of
-        true ->
-            succeed({interleave, Seq1, Seq2}, Ks, Backtrack);
-        false ->
-            fail(Backtrack)
-    end;
+    %% TODO forget about []s
+    succeed({interleave, Seq1, Seq2}, Ks, Backtrack);
 derive_interleave({array, []}, Seq2, Json, Ks, Backtrack) ->
     derive(Seq2, Json, Ks, Backtrack);
 derive_interleave(Seq1, {array, []}, Json, Ks, Backtrack) ->
     derive(Seq1, Json, Ks, Backtrack);
 derive_interleave(Seq1, Seq2, [H | T], Ks, Backtrack) ->
     %% ^ is commutative
-    Fail = {Seq2, [H], [{{interleave, Seq1, T}, Backtrack} | Ks]},
-    Succeed = {{interleave, Seq2, T}, [Fail | Backtrack]},
+    Fail = {Seq2, [H], [{interleave, Seq1, T} | Ks]},
+    Succeed = {interleave, Seq2, T},
     derive(Seq1, [H], [Succeed | Ks], [Fail | Backtrack]).
 
 %% 'empty' signifies that we have fully matched a value; this is the
 %% case if either we have matched a ground term or discarded a value,
 %% or we have matched a sequence and have a nullable pattern.
 
-%% We have two kinds of continuation. For {nested, ...}, we are
+%% We have two kinds of continuation. For {rest, ...}, we are
 %% expecting to have matched an element of a compound value and can
 %% continue with the other elements. For anything else, we are
 %% expecting to have some collection of values left to match.
@@ -102,20 +98,19 @@ succeed(Pattern, [], Backtrack) ->
         true ->  {ok, []};
         false -> fail(Backtrack)
     end;
-%% Partially matched an array value
+%% Matched an element
 succeed(Remainder,
-        [{{rest, Pattern, Json}, Backtrack} | Ks], Backtrack) ->
+        [{rest, Pattern, Json} | Ks], Backtrack) ->
     %% shortcut; really should be nullable_seq specifically
-    io:format("Remainder : ~p, Outer: ~p, JSON: ~p~n", [Remainder, Pattern, Json]),
     case nullable(Remainder) of
         true  -> derive(Pattern, Json, Ks, Backtrack);
         false -> fail(Backtrack)
     end;
 %% Partially matched an array pattern, keep going ...
-succeed(empty, [{{array, Rest}, Json} | Ks], Backtrack) ->
+succeed(empty, [{array, Rest, Json} | Ks], Backtrack) ->
     derive_seq(Rest, Json, Ks, Backtrack);
 %% Partially matched an interleaved pattern, keep going ..
-succeed(LHS, [{{interleave, RHS, Json}, Backtrack} | Ks], _) ->
+succeed(LHS, [{interleave, RHS, Json} | Ks], Backtrack) ->
     derive_interleave(LHS, RHS, Json, Ks, Backtrack).
 
 fail([]) ->
@@ -280,7 +275,8 @@ interleave_match_test_() ->
              { "[1] ^ [2]", [2, 1] },
              { "[1, 2] ^ [3, 4]", [1, 3, 2, 4]},
              { "[1, 2] ^ [3, 4] ^ [5, 6]", [1, 2, 3, 4, 5, 6] },
-             { "[1, 2] ^ [3, 4] ^ [5, 6]", [3, 5, 1, 2, 6, 4] }
+             { "[1, 2] ^ [3, 4] ^ [5, 6]", [3, 5, 1, 2, 6, 4] },
+             { "[number *] ^ [1, 2]", [0, 1, 0, 0, 2, 0] }
              ]].
 
 capture_notestyet_() ->
