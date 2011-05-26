@@ -76,7 +76,7 @@ ground({ground_type, _Line, Type}) ->
     Type.
 
 value({string, _Line, Chars}) ->
-    {value, string_val(Chars)};
+    {value, list_to_binary(string_val(Chars))};
 value({literal, _Line, Value}) ->
     {value, Value}.
 

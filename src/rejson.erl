@@ -121,7 +121,7 @@ fail([{Pattern, Json, Ks} | Backtrack]) ->
 -define(MATCH, succeed(empty, Ks, Backtrack)).
 
 derive_simple(string, String, Ks, Backtrack) when
-      is_list(String) ->
+      is_binary(String) ->
     ?MATCH;
 derive_simple(number, Number, Ks, Backtrack) when
       is_number(Number) ->
@@ -170,19 +170,19 @@ parse_test_() ->
              %% Ground values
              { discard, "_" },
              { {value, 1}, "1" },
-             { {value, ""}, "\"\"" },
-             { {value, "foo"}, "\"foo\"" },
-             { {value, [$\"]}, [$\", $\\, $\", $\"] },
-             { {value, [$\", $\"]}, [$\", $\\, $\", $\\, $\", $\"] },
+             { {value, <<"">>}, "\"\"" },
+             { {value, <<"foo">>}, "\"foo\"" },
+             { {value, <<$\">>}, [$\", $\\, $\", $\"] },
+             { {value, <<$\", $\">>}, [$\", $\\, $\", $\\, $\", $\"] },
              { {value, 1.5}, "1.5" }, %% careful ..
 
              %% Compound values
              { {array, []}, "[]" },
              { {array, [{value, 1}]}, "[1]" },
              { {array, [{value, 2}, {value, 3}]}, "[2, 3]" },
-             { {array, [{value, 5}, {value, "bar"}]}, "[5, \"bar\"]" },
+             { {array, [{value, 5}, {value, <<"bar">>}]}, "[5, \"bar\"]" },
              { {object, []}, "{}" },
-             { {object, [{"foo", {value, "bar"}}]}, "{ \"foo\" : \"bar\" }" },
+             { {object, [{"foo", {value, <<"bar">>}}]}, "{ \"foo\" : \"bar\" }" },
              { {object, [{"foo", discard}, discard]}, "{\"foo\": _, _}" },
 
              %% Ground types
@@ -194,7 +194,7 @@ parse_test_() ->
 
              %% Alternation
              { {either, number, string}, "number | string" },
-             { {either, {value, "foo"}, {array, []}}, "\"foo\" | []" },
+             { {either, {value, <<"foo">>}, {array, []}}, "\"foo\" | []" },
              { {either, {value, 38}, {object, []}}, " 38 | {}" },
 
              %% Repeats and interleave
@@ -217,7 +217,7 @@ parse_test_() ->
              %% Simple variable capture
              { {capture, "Foo", discard}, "Foo" },
              { {capture, "Foo", {value, 1}}, "Foo = 1"},
-             { {capture, "Foo", {value, "foo"}}, "Foo = \"foo\"" }
+             { {capture, "Foo", {value, <<"foo">>}}, "Foo = \"foo\"" }
             ]].
 
 value_match_test_() ->
@@ -228,15 +228,15 @@ value_match_test_() ->
             [
              {"_", 103},
              {"number", 46.5},
-             {"string", "foo"},
+             {"string", <<"foo">>},
              {"boolean", true},
              {"boolean", false},
              {"1", 1},
-             {"\"foobar\"", "foobar"},
+             {"\"foobar\"", <<"foobar">>},
              {"true", true},
              {"false", false},
              {"number | string", 34},
-             {"number | string", "foo"},
+             {"number | string", <<"foo">>},
              {"1 | 2 | 3", 3}
     ]].
 
@@ -248,8 +248,8 @@ array_match_test_() ->
             [
              { "[]", [] },
              { "[1]", [1] },
-             { "[\"foo\", number]", ["foo", 4.7] },
-             { "[_, _]", [4, "bar"] },
+             { "[\"foo\", number]", [<<"foo">>, 4.7] },
+             { "[_, _]", [4, <<"bar">>] },
 
              { "[number *]", [1, 2, 3] },
              { "[number *]", [] },
@@ -304,8 +304,8 @@ nomatch_test_() ->
              { "string", 1 },
              { "number", "foo" },
              { "boolean", 56 },
-             { "true", false }
-             %% TODO array v string
+             { "true", false },
+             { "[65, 66, 67]", <<"ABC">> }
             ]].
 
 -endif.
