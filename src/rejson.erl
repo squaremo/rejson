@@ -19,66 +19,67 @@ match(Pattern, Json) ->
     derive(Pattern, Json).
 
 %% Start a derivation with fresh stacks. Every time we try a match, we
-%% push onto the continuation stack. If the match is successful, we
-%% pop and continue. Every time we may need to backtrack, we push onto
-%% the backtrack stack; if we come to a dead-end, we pop and continue.
+%% push onto the success continuation stack. Every time we may
+%% backtrack, we push onto the failure continuation stack. If a match
+%% is successful, we pop a success continuation; if we come to a
+%% dead-end, we pop a failure continuation.
 derive(P, J) ->
     derive(P, J, [], []).
 
-%% TODO empty object
-%% Either
-derive({either, P1, P2}, Json, Ks, Backtrack) ->
-    derive(P1, Json, Ks, [{P2, Json, Ks} | Backtrack]);
-derive({array, Seq}, Json, Ks, Backtrack) when is_list(Json) ->
-    derive_seq(Seq, Json, Ks, Backtrack);
-derive({array, _}, _, _, Backtrack) ->
-    fail(Backtrack);
-derive({interleave, Seq1, Seq2}, Json, Ks, Backtrack) when
+derive({either, P1, P2}, Json, Ks, FKs) ->
+    derive(P1, Json, Ks, [{P2, Json, Ks} | FKs]);
+derive({array, Seq}, Json, Ks, FKs) when is_list(Json) ->
+    derive_seq(Seq, Json, Ks, FKs);
+derive({array, _}, _, _, FKs) ->
+    fail(FKs);
+derive({interleave, Seq1, Seq2}, Json, Ks, FKs) when
       is_list(Json) ->
-    derive_interleave(Seq1, Seq2, Json, Ks, Backtrack);
-derive({interleave, _, _}, _, _, Backtrack) ->
-    fail(Backtrack);
-derive({capture, _V, P}, Json, Ks, Backtrack) ->
-    %% TODO
-    derive(P, Json, Ks, Backtrack);
-derive(Pattern, Json, Ks, Backtrack) ->
-    derive_simple(Pattern, Json, Ks, Backtrack).
+    derive_interleave(Seq1, Seq2, Json, Ks, FKs);
+derive({interleave, _, _}, _, _, FKs) ->
+    fail(FKs);
+derive({capture, V, P}, Json, Ks, FKs) ->
+    derive_capture(V, P, Json, Ks, FKs);
+derive(Pattern, Json, Ks, FKs) ->
+    derive_simple(Pattern, Json, Ks, FKs).
 
-derive_seq(Pattern, [], Ks, Backtrack) ->
-    succeed({array, Pattern}, Ks, Backtrack);
+derive_capture(V, P, J, Ks, FKs) ->
+    derive(P, J, [{bind, V, J} | Ks], FKs).
+
+derive_seq(Pattern, [], Ks, FKs) ->
+    succeed({array, Pattern}, Ks, FKs);
 %% Unmatched values left over
-derive_seq([], _Json, _, Backtrack) ->
-    fail(Backtrack);
-derive_seq([{maybe, P} | Rest], Json, Ks, Backtrack) ->
+derive_seq([], _Json, _, FKs) ->
+    fail(FKs);
+derive_seq([{maybe, P} | Rest], Json, Ks, FKs) ->
     %% shortcut the either
     derive_seq(Rest, Json, Ks,
-               [{{array, [P | Rest]}, Json, Ks} | Backtrack]);
-derive_seq([{star, P} | Rest], Json, Ks, Backtrack) ->
+               [{{array, [P | Rest]}, Json, Ks} | FKs]);
+derive_seq([{star, P} | Rest], Json, Ks, FKs) ->
     derive_seq(Rest, Json, Ks,
-               [{{array, [P, {star, P} | Rest]}, Json, Ks} | Backtrack]);
-derive_seq([{plus, P} | Rest], Json, Ks, Backtrack) ->
-    derive_seq([P, {star, P} | Rest], Json, Ks, Backtrack);
-derive_seq([P | PRest], [J | JRest], Ks, Backtrack) ->
+               [{{array, [P, {star, P} | Rest]}, Json, Ks} | FKs]);
+derive_seq([{plus, P} | Rest], Json, Ks, FKs) ->
+    derive_seq([P, {star, P} | Rest], Json, Ks, FKs);
+derive_seq([P | PRest], [J | JRest], Ks, FKs) ->
     %% FIXME make this 'push', otherwise simplify (e.g., don't bother
     %% pushing if a simple pattern)
-    derive(P, J, [{rest, {array, PRest}, JRest} | Ks], Backtrack).
+    derive(P, J, [{rest, {array, PRest}, JRest} | Ks], FKs).
 
 %% Interleave:
 %% a ^ b / s |- (a / s) ^ b | a ^ (b / s)
 
 %% TODO redundant?
-derive_interleave(Seq1, Seq2, [], Ks, Backtrack) ->
+derive_interleave(Seq1, Seq2, [], Ks, FKs) ->
     %% TODO forget about []s
-    succeed({interleave, Seq1, Seq2}, Ks, Backtrack);
-derive_interleave({array, []}, Seq2, Json, Ks, Backtrack) ->
-    derive(Seq2, Json, Ks, Backtrack);
-derive_interleave(Seq1, {array, []}, Json, Ks, Backtrack) ->
-    derive(Seq1, Json, Ks, Backtrack);
-derive_interleave(Seq1, Seq2, [H | T], Ks, Backtrack) ->
+    succeed({interleave, Seq1, Seq2}, Ks, FKs);
+derive_interleave({array, []}, Seq2, Json, Ks, FKs) ->
+    derive(Seq2, Json, Ks, FKs);
+derive_interleave(Seq1, {array, []}, Json, Ks, FKs) ->
+    derive(Seq1, Json, Ks, FKs);
+derive_interleave(Seq1, Seq2, [H | T], Ks, FKs) ->
     %% ^ is commutative
     Fail = {Seq2, [H], [{interleave, Seq1, T} | Ks]},
     Succeed = {interleave, Seq2, T},
-    derive(Seq1, [H], [Succeed | Ks], [Fail | Backtrack]).
+    derive(Seq1, [H], [Succeed | Ks], [Fail | FKs]).
 
 %% 'empty' signifies that we have fully matched a value; this is the
 %% case if either we have matched a ground term or discarded a value,
@@ -93,50 +94,50 @@ derive_interleave(Seq1, Seq2, [H | T], Ks, Backtrack) ->
 %% and explicit end_array/end_object (or empty) continuations.
 
 %% Nothing left to match, return.
-succeed(Pattern, [], Backtrack) ->
+succeed(Pattern, [], FKs) ->
     case nullable(Pattern) of
         true ->  {ok, []};
-        false -> fail(Backtrack)
+        false -> fail(FKs)
     end;
 %% Matched an element
 succeed(Remainder,
-        [{rest, Pattern, Json} | Ks], Backtrack) ->
+        [{rest, Pattern, Json} | Ks], FKs) ->
     %% shortcut; really should be nullable_seq specifically
     case nullable(Remainder) of
-        true  -> derive(Pattern, Json, Ks, Backtrack);
-        false -> fail(Backtrack)
+        true  -> derive(Pattern, Json, Ks, FKs);
+        false -> fail(FKs)
     end;
 %% Partially matched an array pattern, keep going ...
-succeed(empty, [{array, Rest, Json} | Ks], Backtrack) ->
-    derive_seq(Rest, Json, Ks, Backtrack);
+succeed(empty, [{array, Rest, Json} | Ks], FKs) ->
+    derive_seq(Rest, Json, Ks, FKs);
 %% Partially matched an interleaved pattern, keep going ..
-succeed(LHS, [{interleave, RHS, Json} | Ks], Backtrack) ->
-    derive_interleave(LHS, RHS, Json, Ks, Backtrack).
+succeed(LHS, [{interleave, RHS, Json} | Ks], FKs) ->
+    derive_interleave(LHS, RHS, Json, Ks, FKs).
 
 fail([]) ->
     no_match;
-fail([{Pattern, Json, Ks} | Backtrack]) ->
-    derive(Pattern, Json, Ks, Backtrack).
+fail([{Pattern, Json, Ks} | FKs]) ->
+    derive(Pattern, Json, Ks, FKs).
 
--define(MATCH, succeed(empty, Ks, Backtrack)).
+-define(MATCH, succeed(empty, Ks, FKs)).
 
-derive_simple(string, String, Ks, Backtrack) when
+derive_simple(string, String, Ks, FKs) when
       is_binary(String) ->
     ?MATCH;
-derive_simple(number, Number, Ks, Backtrack) when
+derive_simple(number, Number, Ks, FKs) when
       is_number(Number) ->
     ?MATCH;
-derive_simple(boolean, Bool, Ks, Backtrack) when
+derive_simple(boolean, Bool, Ks, FKs) when
       Bool =:= true orelse Bool =:= false ->
     ?MATCH;
-derive_simple(true, true, Ks, Backtrack) ->
+derive_simple(true, true, Ks, FKs) ->
     ?MATCH;
-derive_simple({value, Value}, Value, Ks, Backtrack) ->
+derive_simple({value, Value}, Value, Ks, FKs) ->
     ?MATCH;
-derive_simple(discard, _Json, Ks, Backtrack) ->
+derive_simple(discard, _Json, Ks, FKs) ->
     ?MATCH;
-derive_simple(_, _, _, Backtrack) ->
-    fail(Backtrack).
+derive_simple(_, _, _, FKs) ->
+    fail(FKs).
 
 nullable(empty) ->
     true;
@@ -279,7 +280,7 @@ interleave_match_test_() ->
              { "[number *] ^ [1, 2]", [0, 1, 0, 0, 2, 0] }
              ]].
 
-capture_notestyet_() ->
+capture_test_() ->
     [{A, ?_test(case parse(A) of
                     {ok, P} ->
                         {ok, Bindings0} = match(P, B),
