@@ -50,7 +50,7 @@ array -> array_head maybe_interleave : interleave('$1', '$2').
 maybe_interleave -> '$empty' : [].
 maybe_interleave -> '^' array : '$2'.
 
-array_head -> '[' array_pattern ']' : {array, '$2'}.
+array_head -> '[' array_pattern ']' : '$2'.
 
 array_pattern -> '$empty' : [].
 array_pattern -> array_value array_rest : ['$1' | '$2'].
@@ -64,7 +64,7 @@ array_value -> pattern '*' : {star, '$1'}.
 array_value -> pattern '+' : {plus, '$1'}.
 array_value -> pattern '?' : {maybe, '$1'}.
 
-object -> '{' object_pattern '}' : {object, '$2'}.
+object -> '{' object_pattern '}' : {'$2'}.
 
 object_pattern -> '$empty' : [].
 object_pattern -> object_value object_rest : ['$1' | '$2'].
@@ -82,9 +82,9 @@ ground({ground_type, _Line, Type}) ->
     Type.
 
 value({string, _Line, Chars}) ->
-    {value, list_to_binary(string_val(Chars))};
+    list_to_binary(string_val(Chars));
 value({literal, _Line, Value}) ->
-    {value, Value}.
+    Value.
 
 key({string, _Line, Chars}) ->
     string_val(Chars).
