@@ -81,9 +81,24 @@ derive_interleave(Seq1, [], Json, Ks, FKs, Bs) ->
     derive(Seq1, Json, Ks, FKs, Bs);
 derive_interleave(Seq1, Seq2, [H | T], Ks, FKs, Bs) ->
     %% ^ is commutative
-    Fail = {Seq2, [H], [{interleave, Seq1, T} | Ks], Bs},
     Succeed = {interleave, Seq2, T},
-    derive(Seq1, [H], [Succeed | Ks], [Fail | FKs], Bs).
+    SucceedAfterFail = {interleave, Seq1, T},
+    Fail = case Seq2 of
+               [{capture, V1, {R1, P1}} | Seq2s] when
+                     R1 =:= star orelse R1 =:= plus orelse R1 =:= maybe ->
+                   {[{R1, {capture, V1, P1}} | Seq2s], [H],
+                    [SucceedAfterFail, {collect, V1} | Ks], Bs};
+               _ ->
+                   {Seq2, [H], [SucceedAfterFail | Ks], Bs}
+           end,
+    case Seq1 of
+        [{capture, V2, {R2, P2}} | Seq1s] when
+              R2 =:= star orelse R2 =:= plus orelse R2 =:= maybe ->
+            derive([{R2, {capture, V2, P2}} | Seq1s], [H],
+                   [Succeed, {collect, V2} | Ks], [Fail | FKs], Bs);
+        _ ->
+            derive(Seq1, [H], [Succeed | Ks], [Fail | FKs], Bs)
+    end.
 
 %% 'empty' signifies that we have fully matched a value; this is the
 %% case if either we have matched a ground term or discarded a value,
@@ -93,9 +108,6 @@ derive_interleave(Seq1, Seq2, [H | T], Ks, FKs, Bs) ->
 %% expecting to have matched an element of a compound value and can
 %% continue with the other elements. For anything else, we are
 %% expecting to have some collection of values left to match.
-
-%% ***TODO Use [..] for array patterns, {[]} for object patterns,
-%% and explicit end_array/end_object (or empty) continuations.
 
 %% Nothing left to match, return.
 succeed(Pattern, [], FKs, Bs) ->
@@ -318,7 +330,10 @@ capture_test_() ->
                [{"Foo", [1, 2]}, {"Bar", [3, 4]}] },
              { "[Foo = string ?, number *]", [1, 2, 3], [{"Foo", []}] },
              { "[Foo = number *] ^ [1, 2]", [10, 1, 9, 8, 2, 7],
-               [{"Foo", [10, 9, 8, 7]}] }
+               [{"Foo", [10, 9, 8, 7]}] },
+             { "[Foo = number *, 3] ^ [Bar = string *, \"three\"]",
+               [1, <<"one">>, 2, <<"two">>, <<"three">>, 3],
+               [{"Foo", [1, 2]}, {"Bar", [<<"one">>, <<"two">>]}] }
             ]].
 
 nomatch_test_() ->
