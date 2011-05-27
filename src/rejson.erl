@@ -60,6 +60,10 @@ derive_seq([{star, P} | Rest], Json, Ks, FKs, Bs) ->
                Bs);
 derive_seq([{plus, P} | Rest], Json, Ks, FKs, Bs) ->
     derive_seq([P, {star, P} | Rest], Json, Ks, FKs, Bs);
+derive_seq([{capture, V, {R, P}} | Rest], Json, Ks, FKs, Bs)  when
+      R =:= star orelse R =:= plus orelse R =:= maybe ->
+    derive_seq([{R, {capture, V, P}} | Rest], Json,
+               [{collect, V} | Ks], FKs, Bs);
 derive_seq([P | PRest], [J | JRest], Ks, FKs, Bs) ->
     %% FIXME make this 'push', otherwise simplify (e.g., don't bother
     %% pushing if a simple pattern)
@@ -108,8 +112,12 @@ succeed(Remainder,
         true  -> derive(Pattern, Json, Ks, FKs, Bs);
         false -> fail(FKs)
     end;
-succeed(Remainder, [{bind, V, J} |Ks], FKs, Bs) ->
+succeed(Remainder, [{bind, V, J} | Ks], FKs, Bs) ->
     succeed(Remainder, Ks, FKs, [{V, J} | Bs]);
+succeed(Remainder, [{collect, V} | Ks], FKs, Bs) ->
+    NewBs = [{V, lists:reverse(proplists:get_all_values(V, Bs))} |
+             proplists:delete(V, Bs)],
+    succeed(Remainder, Ks, FKs, NewBs);
 %% Partially matched an array pattern, keep going ...
 succeed(empty, [{array, Rest, Json} | Ks], FKs, Bs) ->
     derive_seq(Rest, Json, Ks, FKs, Bs);
@@ -313,7 +321,9 @@ capture_test_() ->
              { "Foo = ([number, number] ^ [1, 2])", [1, 3, 4, 2],
                [{"Foo", [1, 3, 4, 2]}] },
 
-             { "[Foo = number *, 4]", [1, 2, 3, 4], [{"Foo", [1, 2, 3]}] }
+             { "[Foo = number *, 4]", [1, 2, 3, 4], [{"Foo", [1, 2, 3]}] },
+             { "[Foo = number *, 10, Bar = number *]", [1, 2, 10, 3, 4],
+               [{"Foo", [1, 2]}, {"Bar", [3, 4]}] }
             ]].
 
 nomatch_test_() ->
