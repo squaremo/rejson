@@ -108,8 +108,8 @@ succeed(Remainder,
         true  -> derive(Pattern, Json, Ks, FKs, Bs);
         false -> fail(FKs)
     end;
-succeed(empty, [{bind, V, J} |Ks], FKs, Bs) ->
-    succeed(empty, Ks, FKs, [{V, J} | Bs]);
+succeed(Remainder, [{bind, V, J} |Ks], FKs, Bs) ->
+    succeed(Remainder, Ks, FKs, [{V, J} | Bs]);
 %% Partially matched an array pattern, keep going ...
 succeed(empty, [{array, Rest, Json} | Ks], FKs, Bs) ->
     derive_seq(Rest, Json, Ks, FKs, Bs);
@@ -302,7 +302,13 @@ capture_test_() ->
              { "[Foo = _, Bar = _]", [4, 5], [{"Foo", 4}, {"Bar", 5}] },
              { "[Foo = number, _ *]", [3, 4, 5, 6], [{"Foo", 3}] },
              { "[number *, Foo = string, _ *]", [1, 2, <<"foo">>, 4, 5],
-               [{"Foo", <<"foo">>}] }
+               [{"Foo", <<"foo">>}] },
+
+             { "Foo = [_, _]", [1, 2], [{"Foo", [1, 2]}] },
+             { "Foo = ([number, number] ^ [1, 2])", [1, 3, 4, 2],
+               [{"Foo", [1, 3, 4, 2]}] },
+
+             { "[Foo = number *, 4]", [1, 2, 3, 4], [{"Foo", [1, 2, 3]}] }
             ]].
 
 nomatch_test_() ->
