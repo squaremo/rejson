@@ -1,5 +1,5 @@
 
-Nonterminals document
+Nonterminals capture
              value
              pattern
              variable
@@ -23,18 +23,22 @@ Terminals    literal
              '=' '{' '}' '[' ']' '*' '+' '?' '^' ',' ':' '|' '(' ')'
 .
 
-Rootsymbol pattern.
+Rootsymbol capture.
 Endsymbol '$end'.
+
+Left 150 '|'.
+
+capture -> variable '=' capture : {capture, '$1', '$3'}.
+capture -> variable : {capture, '$1', discard}.
+capture -> pattern : '$1'.
 
 pattern -> value : '$1'.
 pattern -> discard : discard.
 pattern -> ground_type : ground('$1').
 pattern -> array : '$1'.
 pattern -> object : '$1'.
-pattern -> variable : {capture, '$1', discard}.
-pattern -> variable '=' pattern : {capture, '$1', '$3'}.
 pattern -> pattern '|' pattern : {either, '$1', '$3'}.
-pattern -> '(' pattern ')': '$2'.
+pattern -> '(' capture ')': '$2'.
 
 value -> literal : value('$1').
 value -> string : value('$1').
@@ -55,6 +59,7 @@ array_rest -> '$empty' : [].
 array_rest -> ',' array_value array_rest : ['$2' | '$3'].
 
 array_value -> pattern : '$1'.
+array_value -> variable '=' array_value : {capture, '$1', '$3'}. 
 array_value -> pattern '*' : {star, '$1'}.
 array_value -> pattern '+' : {plus, '$1'}.
 array_value -> pattern '?' : {maybe, '$1'}.
@@ -68,8 +73,8 @@ object_rest -> '$empty' : [].
 object_rest -> ',' discard : [discard].
 object_rest -> ',' object_value object_rest : ['$2' | '$3'].
 
-object_value -> string ':' pattern : {key('$1'), '$3'}.
-object_value -> string ':' pattern '?' : {key('$1'), {maybe, '$3'}}.
+object_value -> string ':' capture : {key('$1'), '$3'}.
+object_value -> string ':' capture '?' : {key('$1'), {maybe, '$3'}}.
 
 Erlang code.
 

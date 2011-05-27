@@ -222,7 +222,12 @@ parse_test_() ->
              { {capture, "Foo", discard}, "Foo" },
              { {capture, "Foo", {value, 1}}, "Foo = 1"},
              { {capture, "Foo", {value, <<"foo">>}}, "Foo = \"foo\"" },
-             { {capture, "Foo", {either, string, number}}, "Foo = string|number" }
+             { {capture, "Foo", {either, string, number}}, "Foo = string|number" },
+
+             %% Parens and precedence
+             { {either, {capture, "Foo", string}, number}, "(Foo = string)|number" },
+             { {capture, "Foo", {either, string, number}}, "Foo = (string|number)" },
+             { {array, [{capture, "Foo", {star, number}}]}, "[Foo = number *]" }
             ]].
 
 value_match_test_() ->
