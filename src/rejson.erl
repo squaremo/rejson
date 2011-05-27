@@ -221,7 +221,8 @@ parse_test_() ->
              %% Simple variable capture
              { {capture, "Foo", discard}, "Foo" },
              { {capture, "Foo", {value, 1}}, "Foo = 1"},
-             { {capture, "Foo", {value, <<"foo">>}}, "Foo = \"foo\"" }
+             { {capture, "Foo", {value, <<"foo">>}}, "Foo = \"foo\"" },
+             { {capture, "Foo", {either, string, number}}, "Foo = string|number" }
             ]].
 
 value_match_test_() ->
@@ -295,7 +296,13 @@ capture_test_() ->
             [
              { "Foo = 1", 1, [{"Foo", 1}] },
              { "Foo = string", <<"foo">>, [{"Foo", <<"foo">>}] },
-             { "Foo = boolean", true, [{"Foo", true}] }
+             { "Foo = boolean", true, [{"Foo", true}] },
+             { "Foo = string|number", 45, [{"Foo", 45}] },
+             { "Foo = Bar = 4", 4, [{"Foo", 4}, {"Bar", 4}]},
+             { "[Foo = _, Bar = _]", [4, 5], [{"Foo", 4}, {"Bar", 5}] },
+             { "[Foo = number, _ *]", [3, 4, 5, 6], [{"Foo", 3}] },
+             { "[number *, Foo = string, _ *]", [1, 2, <<"foo">>, 4, 5],
+               [{"Foo", <<"foo">>}] }
             ]].
 
 nomatch_test_() ->
