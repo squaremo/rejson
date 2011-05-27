@@ -5,15 +5,12 @@ language for JSON. It may lead to a full unifier, who knows.
 
 ## What does it do?
 
-Not much, yet, just parsing pattern strings. I'll implement the actual
-matcher in good time ..
-
-What will it do (if I finish it)? Here's a suggestive example:
+Here's an example:
 
      > Json = json:decode("[1, 2, \"foo\", 3]"),
      > Pattern = rejson:parse("[1, 2, number *] ^ [S = string]"),
      > rejson:match(Pattern, Json).
-     {match, [{"S", "foo"}]}
+     {ok, [{"S", "foo"}]}
 
 ## Related work
 
@@ -57,7 +54,7 @@ For example,
 
     1 / 1 |- match
 
-and
+Objects are treated as unordered, so
 
     {"foo": 1, "bar": 2} / {"bar": 2, "foo": 1} |- match
 
@@ -101,9 +98,9 @@ properties are unordered anyway).
 ### Star, Plus, Maybe
 
 The Kleene operator '*' (zero or more) and its relative '+' (one or more) can
-match arrays:
+match in arrays:
 
-    [number *] / [1,2,3] |- match
+    [1, number *] / [1,2,3] |- match
 
 Maybe, '?', matches zero or one, and can be used in arrays or objects:
 
@@ -115,10 +112,10 @@ Maybe, '?', matches zero or one, and can be used in arrays or objects:
 
 ### Interleave
 
-Interleave, '^', can be used between array patterns to matches array values
-in which the elements matching the left-hand pattern are arbitrarily
-interleaved with the elements matching the right-hand pattern. For
-example,
+Interleave, '^', can be used between array patterns to matches array
+values in which the elements matching the left-hand pattern are
+arbitrarily interleaved with the elements matching the right-hand
+pattern, while staying in order. For example,
 
     [1, 2, 3] ^ ["foo", "bar"] / [1, "foo", 2, 3, "bar"] |- match
 
@@ -129,4 +126,5 @@ that will prodice a binding if it matches.  For example,
 
     Foo = number / 3 |- match, Foo = 3
 
-The one place a capture cannot appear is as a property name.
+A capture cannot appear is as a property name, or (currently) as the
+operand of an interleave.
