@@ -67,6 +67,7 @@ array_value -> pattern '?' : {maybe, '$1'}.
 object -> '{' object_pattern '}' : {'$2'}.
 
 object_pattern -> '$empty' : [].
+object_pattern -> discard : [discard]. 
 object_pattern -> object_value object_rest : ['$1' | '$2'].
 
 object_rest -> '$empty' : [].
