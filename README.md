@@ -102,13 +102,16 @@ match in arrays:
 
     [1, number *] / [1,2,3] |- match
 
-Maybe, '?', matches zero or one, and can be used in arrays or objects:
+Maybe, '?', matches zero or one, and can be used in arrays:
 
     [number, string ?] / [1] |- match
     [number, string ?] / [1, "bar"] |- match
 
+In objects, maybe indicates the property may be absent; if it is
+present, the pattern must match:
+
     {"foo": string ?, _} / {"bar": 1} |- match
-    {"foo": string ?, _} / {"foo": 2} |- match
+    {"foo": string ?, _} / {"foo": 2} |- no_match
 
 ### Interleave
 
@@ -127,4 +130,4 @@ that will prodice a binding if it matches.  For example,
     Foo = number / 3 |- match, Foo = 3
 
 A capture cannot appear is as a property name, or (currently) as the
-operand of an interleave.
+operand of an interleave, though it can appear *in* an operand.
