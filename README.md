@@ -131,3 +131,27 @@ that will prodice a binding if it matches.  For example,
 
 A capture cannot appear is as a property name, or (currently) as the
 operand of an interleave, though it can appear *in* an operand.
+
+## Further work
+
+### Matching with a streaming parser
+
+It's fairly obvious that parsing the entire JSON value ahead of time
+is a waste, if the match fails early on. Using a stream parser (or
+just a lazy tokeniser, JSON is simple enough) would mean only doing
+the parsing that's needed.
+
+Backtracks would need to save the state of the parser; but of course,
+in a functional language this isn't a big deal.
+
+### Determining which of a set of patterns matches a value
+
+Often the problem at hand is not "which values match this pattern?",
+but "which patterns does this value match?". One way to do this is to
+compile all patterns into a state machine where the terminal states
+yield a list of patterns matched -- something like
+http://en.wikipedia.org/wiki/Aho-Corasick_algorithm.
+
+I can foresee two main difficulties: variable captures and
+interleave. Interleave because it results in state explosion. Variable
+capture because it's just awkward.
