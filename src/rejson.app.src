@@ -1,0 +1,11 @@
+{application, rejson,
+ [
+  {description, "Regular JSON expression library"},
+  {vsn, "0.1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
