@@ -1,0 +1,23 @@
+{
+  "author": "Michael Bridgen <mikeb@squaremobius.net>",
+  "name": "rejson",
+  "description": "Regular JSON expressions",
+  "version": "0.1.0",
+  "homepage": "https://github.com/squaremo/rejson",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/squaremo/rejson.git"
+  },
+  "main": "./lib/rejson",
+  "directories": ["lib"],
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "jison": "*"
+  },
+  "scripts": {
+    "prepublish": "./node_modules/.bin/jison lib/rejson.jison -o lib/parser.js"
+  }
+}
