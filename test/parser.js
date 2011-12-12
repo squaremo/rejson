@@ -40,3 +40,39 @@ suite("Primitives",
           nonsense("Not a number", '1.0.0');
         })
       });
+
+suite("Ground types",
+      function() {
+        suite("succeed", function() {
+          good("string", "string", "foo");
+          good("string v empty string", "string", "");
+          good("number", "number", 91);
+          good("number v negative number", "number", -15.2);
+          good("number v scientific notation", "number", 0.72E-6);
+        });
+        suite("fail", function() {
+          bad("string v number", "string", 3256);
+          bad("string v boolean", "string", false);
+          bad("number v numbery string", "number", "914");
+          bad("number v boolean", "number", true);
+        });
+      });
+
+suite("Arrays",
+      function() {
+        suite("succeed", function() {
+          good("empty", "[]", []);
+          good("single", "[72]", [72]);
+          good("nested", "[[number]]", [[-2467.5]]);
+          good("some", "[1, number, string]", [1, -24, "foo"]);
+        });
+        suite("fail", function() {
+          bad("empty v false", "[]", false);
+          bad("empty v empty obj", "[]", {});
+          bad("empty", "[]", [0]);
+        });
+        suite("nonsense", function() {
+          nonsense("mismatch", "[1, 4"),
+          nonsense("missing comma", "[number number]");
+        });
+      });

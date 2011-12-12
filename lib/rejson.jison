@@ -1,22 +1,24 @@
 %lex
 
-op      [{}\[\]=*+?^,:|()]
 str     \"([^\"]|(\\\"))*\"
 float   [-]?[0-9]+\.[0-9]+([E]|[e][+-]?[0-9]+)?
 int     [-]?[0-9]+
 ident   [a-zA-Z_][a-zA-Z_]*
+op      [{}\[\]=*+?^,:|()]
 
 %%
 
-{op}                              {return yytext;}
 {str}                             {return 'string';}
 {float}                           {return 'float';}
 {int}                             {return 'integer';}
 ("true")|("false")                {return 'boolean';}
 "null"                            {return 'null';}
-("number")|("string")|("boolean") {return 'ground_type';}
+("number")                        {return 'ground_type';}
+("string")                        {return 'ground_type';}
+("boolean")                       {return 'ground_type';}
 "_"                               {return 'discard';}
 {ident}                           {return 'identifier';}
+{op}                              {return yytext;}
 [\v\t\s\r\l]                      {/* whitespace */}
 
 /lex
