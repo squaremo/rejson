@@ -22,6 +22,11 @@ function nonsense(desc, input) {
 suite("Primitives",
       function() {
         suite("succeed", function() {
+          good("discard v number", "_", 2345);
+          good("discard v string", "_", "foobar");
+          good("discard v array", "_", [1, 2, 3]);
+          good("discard v obj", "_", {foo: 45, bar: "foobar"});
+          good("discard v null", "_", null);
           good("null", "null", null);
           good("a number", "34", 34);
           good("negative number", "-781", -781);
@@ -64,12 +69,13 @@ suite("Arrays",
           good("empty", "[]", []);
           good("single", "[72]", [72]);
           good("nested", "[[number]]", [[-2467.5]]);
-          good("some", "[1, number, string]", [1, -24, "foo"]);
+          good("some", "[_, number, string]", [1, -24, "foo"]);
         });
         suite("fail", function() {
           bad("empty v false", "[]", false);
           bad("empty v empty obj", "[]", {});
           bad("empty", "[]", [0]);
+          bad("discard v empty", "[_]", []);
         });
         suite("nonsense", function() {
           nonsense("mismatch", "[1, 4");
@@ -96,5 +102,29 @@ suite("Objects",
           bad("subset", '{"foo": number}', {foo: 7, bar: 8});
           bad("superset", '{"foo": number, "bar": number}', {foo: 8});
           bad("value mismatch", '{"foo": string}', {foo: -24});
+        });
+        suite("nonsense", function() {
+          nonsense("mismatch", '{"foo": number"');
+          nonsense("no key", '{number}');
+          nonsense("no key again", '{"foo": _, string}');
+          nonsense("discard in middle", '{"foo": number, _, "bar": string}');
+        });
+      });
+
+suite("Or",
+      function() {
+        suite("succeed", function() {
+          good("ground types", "number | string", 4);
+          good("ground types", "number | string", "foo");
+          good("in array", "[_, number | string]", [false, "foo"]);
+          good("in obj", '{"bar": string | false}', {bar: "barfoo"});
+          good("associate", "number | boolean | string", "foo");
+        });
+        suite("fail", function() {
+          bad("not included", "number | string", true);
+        });
+        suite("nonsense", function() {
+          nonsense("no LHS", "| number");
+          nonsense("no RHS", "string |");
         });
       });

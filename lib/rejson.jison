@@ -11,7 +11,8 @@ op      [{}\[\]=*+?^,:|()]
 {str}                             {return 'string';}
 {float}                           {return 'float';}
 {int}                             {return 'integer';}
-("true")|("false")                {return 'boolean';}
+("true")                          {return 'boolean';}
+("false")                         {return 'boolean';}
 "null"                            {return 'null';}
 ("number")                        {return 'ground_type';}
 ("string")                        {return 'ground_type';}
@@ -37,7 +38,7 @@ PATTERN
         | ground_type { $$ = yy.ground(yytext); }
         | INTERLEAVE { $$ = $1; }
         | OBJECT { $$ = $1; }
-        | PATTERN '|' PATTERN { $$ = yy.or($1, $3); }
+        | PATTERN '|' PATTERN { $$ = $1.or($3); }
         | '(' PATTERN ')' { $$ = $2; }
         ;
 
