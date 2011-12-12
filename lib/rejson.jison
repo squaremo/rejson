@@ -2,16 +2,16 @@
 
 op      [{}\[\]=*+?^,:|()]
 str     \"([^\"]|(\\\"))*\"
-float   (\+|-)?[0-9]+\.[0-9]+([E]|[e](\+|-)?[0-9]+)?
-int     (\+|-)?[0-9]+
+float   [-]?[0-9]+\.[0-9]+([E]|[e][+-]?[0-9]+)?
+int     [-]?[0-9]+
 ident   [a-zA-Z_][a-zA-Z_]*
 
 %%
 
 {op}                              {return yytext;}
 {str}                             {return 'string';}
-{float}                           {return 'number';}
-{int}                             {return 'number';}
+{float}                           {return 'float';}
+{int}                             {return 'integer';}
 ("true")|("false")                {return 'boolean';}
 "null"                            {return 'null';}
 ("number")|("string")|("boolean") {return 'ground_type';}
@@ -40,8 +40,9 @@ PATTERN
         ;
 
 VALUE
-        : number { $$ = yy.literal(new Number(yytext)); }
-        | string { $$ = yy.literal(yytext); }
+        : integer { $$ = yy.literal(new Number(yytext).valueOf()); }
+        | float { $$ = yy.literal(new Number(yytext).valueOf()); }
+        | string { $$ = yy.literal(yytext.slice(1, -1)); }
         | boolean { $$ = yy.literal(yytext === "true"); }
         | null { $$ = yy.literal(null); }
         ;
