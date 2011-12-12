@@ -72,7 +72,9 @@ ARRAY_VAL
 
 OBJECT
         : '{' '}' { $$ = yy.object({}); }
+        | '{' discard '}' { $$ = yy.object({}).etc(); }
         | '{' OBJECT_PAT '}' { $$ = yy.object($2); }
+        | '{' OBJECT_PAT ',' discard '}' { $$ = yy.object($2).etc(); }
         ;
 
 OBJECT_PAT
@@ -81,5 +83,5 @@ OBJECT_PAT
         ;
 
 OBJECT_VAL
-        : string ':' PATTERN { $$ = [$1, $3]; }
+        : string ':' PATTERN { $$ = [$1.slice(1, -1), $3]; }
         ;

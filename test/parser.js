@@ -72,7 +72,29 @@ suite("Arrays",
           bad("empty", "[]", [0]);
         });
         suite("nonsense", function() {
-          nonsense("mismatch", "[1, 4"),
+          nonsense("mismatch", "[1, 4");
           nonsense("missing comma", "[number number]");
+        });
+      });
+
+suite("Objects",
+      function() {
+        suite("succeed", function() {
+          good("empty", "{}", {});
+          good("single", '{"foo": number}', {foo: 65});
+          good("ordered", '{"foo": string, "bar": number}',
+               {foo: "foo", bar: -17});
+          good("unordered", '{"bar": number, "foo": string}',
+               {foo: "foo", bar: 71});
+          good("any obj", '{_}', {foo: 4, bar: "bar"});
+          good("subset", '{"foo": 26, _}', {bar: 56, foo: 26});
+        });
+        suite("fail", function() {
+          bad("empty v non-empty", "{}", {foo: false});
+          bad("empty v false", "{}", false);
+          bad("empty v true", "{}", true);
+          bad("subset", '{"foo": number}', {foo: 7, bar: 8});
+          bad("superset", '{"foo": number, "bar": number}', {foo: 8});
+          bad("value mismatch", '{"foo": string}', {foo: -24});
         });
       });
