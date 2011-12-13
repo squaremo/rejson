@@ -1,20 +1,125 @@
 # JSON pattern matching
 
-This is an experiment to see if I can come up with a pattern-matching
-language for JSON. It may lead to a full unifier, who knows.
+ReJSON is a pattern matching language for JSON, similar in expressive
+power to regular expressions for strings, or RelaxNG for XML.
 
 ## What does it do?
 
-Here's an example:
+Here's an example in (the more complete implementation in) Erlang:
 
-     > Json = json:decode("[1, 2, \"foo\", 3]"),
-     > Pattern = rejson:parse("[1, 2, number *] ^ [S = string]"),
-     > rejson:match(Pattern, Json).
-     {ok, [{"S", "foo"}]}
+    > Json = json:decode("[1, 2, \"foo\", 3]"),
+    > Pattern = rejson:parse("[1, 2, number *] ^ [S = string]"),
+    > rejson:match(Pattern, Json).
+    {ok, [{"S", "foo"}]}
+
+Here's an example in JavaScript (Node.js or CommonJS). NB this doesn't
+implement captures yet, so you just get `true` or `false`.
+
+    > var rejson = require('rejson');
+    > var pattern = rejson.parse('{"foo": [number, number]}');
+    > pattern.match({foo: [1, 2]});
+    true
+
+You can also lift a JSON-like value into a pattern:
+
+    > var rejson = require('rejson');
+    > var pattern = rejson({foo: [rejson.number, rejson.number]});
+    > pattern.match({foo: [1, 2]});
+    true
+
+## Pattern syntax
+
+    <pattern> / <value> => <result>
+
+### Values
+
+All JSON literal values are valid patterns, and match by equivalence.
+
+For example,
+
+    1 / 1 => match
+
+Objects are treated as unordered, so
+
+    {"foo": 1, "bar": 2} / {"bar": 2, "foo": 1} => match
+
+### Ground types
+
+`number`, `string`, and `boolean` each match any value of the
+respective type:
+
+    number / 1.5 => match
+
+These can be used nested in an array or object:
+
+    {"foo": number} / {"foo": 10} => match
+
+### Either
+
+A bar signifies alternatives:
+
+    number | string / "foo" => match
+
+### Any
+
+Any, '_', matches any value:
+
+    _ / "foobar" => match
+
+It can be used in arrays and objects:
+
+    [1, 2, 3, _] / [1,2,3,"bar"] => match
+
+    {"foo": _} / {"foo": 23} => match
+
+Used in the place of a whole property it can signify arbitrary
+additional properties:
+
+    {"foo": 1, _} / {"foo": 1, "bar": 2} => match
+
+It can only go in the last position for this purpose (object
+properties are unordered anyway).
+
+### Star, Plus, Maybe
+
+The Kleene operator '*' (zero or more) and its relative '+' (one or more) can
+match in arrays:
+
+    [1, number *] / [1,2,3] => match
+
+Maybe, '?', matches zero or one, and can be used in arrays:
+
+    [number, string ?] / [1] => match
+    [number, string ?] / [1, "bar"] => match
+
+In objects, maybe indicates the property may be absent; if it is
+present, the pattern must match:
+
+    {"foo": string ?, _} / {"bar": 1} => match
+    {"foo": string ?, _} / {"foo": 2} => no_match
+
+### Interleave
+
+Interleave, '^', can be used between array patterns to matches array
+values in which the elements matching the left-hand pattern are
+arbitrarily interleaved with the elements matching the right-hand
+pattern, while staying in order. For example,
+
+    [1, 2, 3] ^ ["foo", "bar"] / [1, "foo", 2, 3, "bar"] => match
+
+### Variable capture
+
+A capture can appear in almost any position, and introduces a pattern
+that will prodice a binding if it matches.  For example,
+
+    Foo = number / 3 => match, {Foo: 3}
+
+A capture cannot appear is as a property name, or (currently) as the
+operand of an interleave, though it can appear *in* an operand.
 
 ## Related work
 
-Here are something things that are like rejson:
+Here are something things that are like ReJSON:
 
  - [**Erlang term
     pattern-matching**](http://www.erlang.org/doc/reference_manual/expressions.html#pattern). This
@@ -43,94 +148,6 @@ Here are something things that are like rejson:
     [jsonr](http://laurentszyster.be/jsonr/). This is more
     text-oriented, with no binding capture, but is close in spirit to
     rejson. It's limited by insisting on being encoded in JSON.
-
-## Pattern syntax
-
-### Values
-   
-All JSON literal values are valid patterns, and match by equivalence.
-
-For example,
-
-    1 / 1 |- match
-
-Objects are treated as unordered, so
-
-    {"foo": 1, "bar": 2} / {"bar": 2, "foo": 1} |- match
-
-### Ground types
-
-`number`, `string`, and `boolean` each match any value of the
-respective type:
-
-    number / 1.5 |- match
-
-These can be used nested in an array or object:
-
-    {"foo": number} / {"foo": 10} |- match
-
-### Either
-
-A bar signifies alternatives:
-
-    number | string / "foo" |- match
-
-### Any
-
-Any, '_', matches any value:
-
-    _ / "foobar" |- match
-
-It can be used in arrays and objects:
-
-    [1, 2, 3, _] / [1,2,3,"bar"] |- match
-
-    {"foo": _} / {"foo": 23} |- match
-
-Used in the place of a whole property it can signify arbitrary
-additional properties:
-
-    {"foo": 1, _} / {"foo": 1, "bar": 2} |- match
-
-It can only go in the last position for this purpose (object
-properties are unordered anyway).
-
-### Star, Plus, Maybe
-
-The Kleene operator '*' (zero or more) and its relative '+' (one or more) can
-match in arrays:
-
-    [1, number *] / [1,2,3] |- match
-
-Maybe, '?', matches zero or one, and can be used in arrays:
-
-    [number, string ?] / [1] |- match
-    [number, string ?] / [1, "bar"] |- match
-
-In objects, maybe indicates the property may be absent; if it is
-present, the pattern must match:
-
-    {"foo": string ?, _} / {"bar": 1} |- match
-    {"foo": string ?, _} / {"foo": 2} |- no_match
-
-### Interleave
-
-Interleave, '^', can be used between array patterns to matches array
-values in which the elements matching the left-hand pattern are
-arbitrarily interleaved with the elements matching the right-hand
-pattern, while staying in order. For example,
-
-    [1, 2, 3] ^ ["foo", "bar"] / [1, "foo", 2, 3, "bar"] |- match
-
-### Variable capture
-
-A capture can appear in almost any position, and introduces a pattern
-that will prodice a binding if it matches.  For example,
-
-    Foo = number / 3 |- match, Foo = 3
-
-A capture cannot appear is as a property name, or (currently) as the
-operand of an interleave, though it can appear *in* an operand.
 
 ## Further work
 
