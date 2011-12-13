@@ -3,21 +3,23 @@
   "name": "rejson",
   "description": "Regular JSON expressions",
   "version": "0.1.0",
+  "main": "./lib/rejson.js",
   "homepage": "https://github.com/squaremo/rejson",
   "repository": {
     "type": "git",
     "url": "git://github.com/squaremo/rejson.git"
   },
-  "main": "./lib/rejson",
   "directories": ["lib"],
   "engines": {
     "node": "*"
   },
   "dependencies": {},
   "devDependencies": {
-    "jison": "*"
+    "jison": "*",
+    "mocha": "*"
   },
   "scripts": {
-    "prepublish": "./node_modules/.bin/jison lib/rejson.jison -o lib/parser.js"
+    "install": "make js",
+    "test": "make test"
   }
 }
