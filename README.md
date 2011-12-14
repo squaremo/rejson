@@ -16,15 +16,15 @@ Here's an example in JavaScript (Node.js or CommonJS). NB this doesn't
 implement captures yet, so you just get `true` or `false`.
 
     > var rejson = require('rejson');
-    > var pattern = rejson.parse('{"foo": [number, number]}');
+    > var pattern = rejson.parse('{"foo": [number *]}');
     > pattern.match({foo: [1, 2]});
     true
 
 You can also lift a JSON-like value into a pattern:
 
     > var rejson = require('rejson');
-    > var pattern = rejson({foo: [rejson.number, rejson.number]});
-    > pattern.match({foo: [1, 2]});
+    > var pattern = rejson({foo: [rejson.number, rejson.any]});
+    > pattern.match({foo: [1, "bar"]});
     true
 
 ## Pattern syntax

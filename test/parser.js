@@ -128,3 +128,15 @@ suite("Or",
           nonsense("no RHS", "string |");
         });
       });
+
+suite("Repeat",
+      function() {
+        suite("succeed", function() {
+          good("star", "[number *]", [1, 2, 3]);
+          good("star matching empty", "[number *]", []);
+          good("star backtracking to empty", "[number *, number]", [1]);
+          good("star times two", "[number *, number *]", [1, 2, 3]);
+          good("star different kinds", "[number *, string *]",
+               [1, 2, "foo", "bar"]);
+        });
+      });
