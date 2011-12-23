@@ -1,3 +1,5 @@
+// -*- javascript-indent-level: 2; js-indent-level: 2 -*-
+
 var parse = require('../lib/rejson.js').parse;
 var assert = require('assert');
 
