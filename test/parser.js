@@ -140,10 +140,13 @@ suite("Repeat",
           good("star times two", "[number *, number *]", [1, 2, 3]);
           good("star different kinds", "[number *, string *]",
                [1, 2, "foo", "bar"]);
+
+          good("plus", "[number +]", [1, 2, 3]);
         });
         suite("fail", function() {
           bad("wrong type", "[number *]", ["string"]);
           bad("at least one", "[number, number *]", []);
+          bad("at least one for plus", "[number +]", []);
         });
         suite("nonsense", function() {
           nonsense("two stars", "[number **]");
