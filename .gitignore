@@ -1,0 +1,5 @@
+*~
+.eunit/
+node_modules/
+src/rejson_parser.erl
+src/rejson_lexer.erl
