@@ -136,9 +136,18 @@ suite("Repeat",
         suite("succeed", function() {
           good("star", "[number *]", [1, 2, 3]);
           good("star matching empty", "[number *]", []);
-          good("star backtracking to empty", "[number *, number]", [1]);
+          good("star backtracking", "[number *, number]", [1]);
           good("star times two", "[number *, number *]", [1, 2, 3]);
           good("star different kinds", "[number *, string *]",
                [1, 2, "foo", "bar"]);
+        });
+        suite("fail", function() {
+          bad("wrong type", "[number *]", ["string"]);
+          bad("at least one", "[number, number *]", []);
+        });
+        suite("nonsense", function() {
+          nonsense("two stars", "[number **]");
+          nonsense("wrong place", "[* number]");
+          nonsense("no argument", "[number, *]");
         });
       });
