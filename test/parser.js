@@ -154,3 +154,33 @@ suite("Repeat",
           nonsense("no argument", "[number, *]");
         });
       });
+
+suite("Interleave",
+      function() {
+        suite("succeed", function() {
+          good("empty", "[] ^ []", []);
+          good("lhs empty", "[] ^ [1, 2, 3]", [1, 2, 3]);
+          good("rhs empty", "[1, 2, 3] ^ []", [1, 2, 3]);
+          good("alt pairs", "[1, 2] ^ [3, 4]", [1, 3, 2, 4]);
+          good("in order", "[1, 2] ^ [3, 4]", [1, 2, 3, 4]);
+          good("discard", "[1, 2] ^ [_]", [1, 3, 2]);
+          good("with star", "[number *] ^ [1, 2]", [6, 1, 7, 3, 2]);
+          good("with star rev", "[1, 2] ^ [_ *]", [1, 3, 2]);
+          good("with or", "[1, 2] ^ [(number|string)*]", ["foo", 1, 3, 2]);
+          good("with plus", "[1, string +] ^ [2, 3]", [2, 1, 3, "foo", "bar"]);
+          good("with plus rev", "[2, 3] ^ [1, string +]",
+               [2, 1, 3, "foo", "bar"]);
+        });
+        suite("fail", function() {
+          bad("empty v not", "[] ^ []", [1]);
+          bad("out of order", "[1, 2] ^ [3, 4]", [1, 2, 4, 3]);
+          bad("out of order alt", "[1, 2] ^ [3, 4]", [1, 4, 2, 3]);
+          bad("missing element", "[number *] ^ [1, 2]", [3, 1, 6, 7]);
+          good("with plus", "[1, string +] ^ [2, 3]", [2, 1, 3]);
+          good("with plus rev", "[2, 3] ^ [1, string +]", [2, 1, 3]);
+        });
+        suite("nonsense", function() {
+          nonsense("no lhs", '^ [1, 2]');
+          nonsense("no rhs", '[1, 2] ^');
+        });
+      });

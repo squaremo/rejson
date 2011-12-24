@@ -52,12 +52,12 @@ VALUE
 
 INTERLEAVE
         : ARRAY '^' ARRAY { $$ = yy.interleave($1, $3); }
-        | ARRAY { $$ = $1; }
+        | ARRAY { $$ = yy.sequence($1); }
         ;
 
 ARRAY
-        : '[' ']' { $$ = yy.sequence([]); }
-        | '[' ARRAY_PAT ']' { $$ = yy.sequence($2); }
+        : '[' ']' { $$ = []; }
+        | '[' ARRAY_PAT ']' { $$ = $2; }
         ;
 
 ARRAY_PAT
