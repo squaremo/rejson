@@ -1,6 +1,6 @@
 -module(rejson).
 
--export([parse/1, match/2]).
+-export([parse/1, match/2, test/2]).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -17,6 +17,12 @@ parse(In) when is_list(In) ->
 %% Match a newly-parsed pattern to a term, all or nothing.
 match(Pattern, Json) ->
     derive(Pattern, Json).
+
+test(Pattern, Json) ->
+    case derive(Pattern, Json) of
+        no_match -> false;
+        _        -> true
+    end.
 
 %% Start a derivation with fresh stacks. Every time we try a match, we
 %% push onto the success continuation stack. Every time we may
@@ -281,7 +287,8 @@ parse_test_() ->
 
 matches(Cases) ->
     [{A, ?_test(case parse(A) of
-                    {ok, P} -> ?assertMatch({ok, []}, match(P, B))
+                    {ok, P} -> ?assert(test(P, B)),
+                               ?assertMatch({ok, []}, match(P, B))
                 end)} ||
         {A, B} <- Cases].
 
@@ -389,6 +396,7 @@ capture_test_() ->
 nomatch_test_() ->
     [{A, ?_test(case parse(A) of
                     {ok, P} ->
+                        ?assertMatch(false, test(P, B)),
                         ?assertMatch(no_match, match(P, B))
                 end)} ||
         {A, B} <-

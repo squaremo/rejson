@@ -12,19 +12,20 @@ Here's an example in (the more complete implementation in) Erlang:
     > rejson:match(Pattern, Json).
     {ok, [{"S", "foo"}]}
 
-Here's an example in JavaScript (Node.js or CommonJS). NB this doesn't
-implement captures yet, so you just get `true` or `false`.
+Here's an example in JavaScript (Node.JS or CommonJS). NB this doesn't
+implement captures yet, so you can use test to just get `true` or
+`false`.
 
     > var rejson = require('rejson');
     > var pattern = rejson.parse('{"foo": [number *]}');
-    > pattern.match({foo: [1, 2]});
+    > pattern.test({foo: [1, 2]});
     true
 
 You can also lift a JSON-like value into a pattern:
 
     > var rejson = require('rejson');
     > var pattern = rejson({foo: [rejson.number, rejson.any]});
-    > pattern.match({foo: [1, "bar"]});
+    > pattern.test({foo: [1, "bar"]});
     true
 
 ## Pattern syntax

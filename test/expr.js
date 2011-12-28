@@ -5,13 +5,13 @@ var assert = require('assert');
 
 function good(desc, input, expected) {
   return test(desc, function() {
-    assert.ok(parse(input).match(expected));
+    assert.ok(parse(input).test(expected));
   });
 }
 
 function bad(desc, input, nomatch) {
   return test(desc, function() {
-    assert.ok(!parse(input).match(nomatch));
+    assert.ok(!parse(input).test(nomatch));
   });
 }
 
